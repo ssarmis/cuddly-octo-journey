@@ -1,0 +1,126 @@
+#pragma once
+
+
+const char* VERTEX_SOURCE = 
+R"(
+#version 440 core
+
+#define MATERIALS_MAXIMUM_AMOUNT 32
+
+#define v4 vec4
+#define v3 vec3
+#define v2 vec2
+#define m4 mat4
+#define u32 uint
+#define r32 float
+
+layout(location=0) in v3 vertexPosition;
+layout(location=1) in v2 vertexUV;
+layout(location=2) in v3 vertexColor;
+
+uniform m4 matrixPerspective;
+uniform m4 matrixTransform;
+uniform m4 matrixView;
+
+out v2 vertexUVOut;
+out v3 vertexColorOut;
+
+void main(){
+    v4 worldPosition = matrixTransform * v4(vertexPosition, 1);
+    worldPosition = matrixView * worldPosition;
+
+    v4 screenPosition = matrixPerspective * worldPosition;
+    gl_Position = screenPosition;
+    vertexUVOut = vertexUV;
+    vertexColorOut = vertexColor;
+}
+
+)";
+
+const char* FRAGMENT_SOURCE = 
+R"(
+#version 440 core
+
+#define v4 vec4
+#define v3 vec3
+#define v2 vec2
+#define m4 mat4
+#define u32 uint
+#define r32 float
+
+in v2 vertexUVOut;
+in v3 vertexColorOut;
+
+out v4 outputColor;
+
+uniform sampler2D materialTextures;
+
+void main(){
+    v4 sampledColor = texture(materialTextures, v2(vertexUVOut.x, vertexUVOut.y));
+    outputColor = v4(vertexColorOut, 1);
+    outputColor.w = sampledColor.x;
+}
+
+)";
+
+
+const char* VERTEX_CURSOR_SOURCE = 
+R"(
+#version 440 core
+
+#define MATERIALS_MAXIMUM_AMOUNT 32
+
+#define v4 vec4
+#define v3 vec3
+#define v2 vec2
+#define m4 mat4
+#define u32 uint
+#define r32 float
+
+layout(location=0) in v3 vertexPosition;
+layout(location=1) in v2 vertexUV;
+layout(location=2) in v3 vertexColor;
+
+uniform m4 matrixPerspective;
+uniform m4 matrixTransform;
+uniform m4 matrixView;
+
+out v2 vertexUVOut;
+out v3 vertexColorOut;
+
+void main(){
+    v4 worldPosition = matrixTransform * v4(vertexPosition, 1);
+    worldPosition = matrixView * worldPosition;
+
+    v4 screenPosition = matrixPerspective * worldPosition;
+    gl_Position = screenPosition;
+    vertexUVOut = vertexUV;
+    vertexColorOut = vertexColor;
+}
+
+)";
+
+const char* FRAGMENT_CURSOR_SOURCE = 
+R"(
+#version 440 core
+
+#define v4 vec4
+#define v3 vec3
+#define v2 vec2
+#define m4 mat4
+#define u32 uint
+#define r32 float
+
+in v2 vertexUVOut;
+in v3 vertexColorOut;
+
+out v4 outputColor;
+
+uniform sampler2D materialTextures;
+
+void main(){
+    outputColor = v4(vertexColorOut, 1);
+    outputColor.w = 0.5;
+}
+
+)";
