@@ -273,6 +273,23 @@ void gapSeekCursorToNewline(GapBuffer* buffer){
     buffer->cursor = clamp(buffer->cursor, 0, buffer->size - 1);
 }
 
+void gapSeekCursorToLine(GapBuffer* buffer, u32 line){
+    // solution before line chaching
+    u32 seekLocation = 0;
+    for(int i = 0; i < buffer->size && line; ++i){
+        if(i >= buffer->gap.start && i < buffer->gap.end){
+            continue;
+        }
+        if(buffer->data[i] == '\n'){
+            line--;
+        }
+        ++seekLocation;
+    }
+
+    buffer->cursor = seekLocation - 1;
+    buffer->cursor = clamp(buffer->cursor, 0, buffer->size - 1);
+}
+
 i32 gapGetConsecutiveSpaces(GapBuffer* buffer){
     i32 clone = buffer->cursor;
 

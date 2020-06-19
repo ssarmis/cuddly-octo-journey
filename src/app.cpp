@@ -135,10 +135,13 @@ int main(int argumentCount, char* arguments[]){
         currentWindow->buffer = gapCreateEmpty();
     }
 
-    Panel openFilePanel = panelCreate({0, 0, 0}, {400, FONT_HEIGHT * 3 + 12}, "Open file");
+    Panel openFilePanel = panelCreate({0, 0, 0}, {400, FONT_HEIGHT * 3 + 12 + 4}, "Open file");
     openFilePanel.action = openFileAction;
 
-    Panel findPanel = panelCreate({0, 0, 0}, {400, FONT_HEIGHT * 3 + 12}, "Find");
+    Panel findPanel = panelCreate({0, 0, 0}, {400, FONT_HEIGHT * 3 + 12 + 4}, "Find");
+
+    Panel gotoLinePanel = panelCreate({0, 0, 0}, {400, FONT_HEIGHT * 3 + 12 + 4}, "Goto line");
+    gotoLinePanel.action = gotoLineAction;
 
     Panel panel = openFilePanel;
 
@@ -652,6 +655,15 @@ int main(int argumentCount, char* arguments[]){
                                         gapIncreaseCursor(currentBuffer);
                                     } else {
                                         switch (character) {
+                                            case 'g':{
+                                                    panelActive = true;
+                                                    panel = gotoLinePanel;
+                                                    panel.buffer = gapCreateEmpty();
+                                                    panel.position.x = currentWindow->left;
+                                                    panel.position.y = -panel.size.y;
+                                                    currentBuffer = &panel.buffer;
+                                                }
+                                                break;
                                             case 'f': {
                                                     panelActive = true;
                                                     panel = findPanel;
@@ -802,7 +814,7 @@ int main(int argumentCount, char* arguments[]){
                 flushRenderBuffer(GL_TRIANGLES, &renderBufferBackground);
             });
 
-            fontRenderGapBuffer({window->left, window->top}, &window->buffer, &renderBuffer, &renderBufferUI, &font);
+            fontRenderGapBuffer({window->left, window->top}, &window->buffer, &renderBuffer, &renderBufferUI, &font, window->scrollTop, window->scrollBottom);
 
             if(i == currentWindowIndex && !panelActive){
                 if(time < 10){
@@ -833,7 +845,7 @@ int main(int argumentCount, char* arguments[]){
          
         if(panelActive){
             panel.position = lerp(panel.position, v3(currentWindow->left, currentWindow->top, 0), 0.3);
-            panel.cursor = {panel.position.x + 12, panel.position.y + 12 + FONT_HEIGHT, 0};
+            panel.cursor = {panel.position.x + 12, panel.position.y + 12 + FONT_HEIGHT + 4, 0};
             for(int i = 0; i < panel.buffer.cursor; ++i){
                 switch(panel.buffer.data[UserToGap(panel.buffer.gap, i)]){
                     case 0:{
@@ -886,8 +898,8 @@ int main(int argumentCount, char* arguments[]){
                 flushRenderBuffer(GL_TRIANGLES, &renderBufferUI);
             });
 
-            fontRenderGapBuffer({panel.position.x + 12, panel.position.y + 12 + FONT_HEIGHT}, &panel.buffer, &renderBuffer, &renderBufferUI, &font);
-            fontRender((u8*)panel.description, strlen(panel.description), {panel.position.x + 12, panel.position.y + FONT_HEIGHT + 12}, &renderBuffer, &font, {0.4, 0.4, 0.4});
+            fontRenderGapBuffer({panel.position.x + 12, panel.position.y + 12 + FONT_HEIGHT + 4}, &panel.buffer, &renderBuffer, &renderBufferUI, &font, 0, FONT_HEIGHT * 4);
+            fontRender((u8*)panel.description, strlen(panel.description), {panel.position.x + 12, panel.position.y + FONT_HEIGHT + 12}, &renderBuffer, &font, {0.6, 0.6, 0.6});
 
             SHADER_SCOPE(shader.programId, {
                 shaderSetUniform4m(shader.locations.matrixView, m4());

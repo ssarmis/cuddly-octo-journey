@@ -23,7 +23,7 @@ struct FontGL {
     GLuint textureId;
 };
 
-void fontRenderGapBuffer(v2 position, GapBuffer* buffer, RenderBuffer* renderBuffer, RenderBuffer* renderBufferUI, FontGL* font){
+void fontRenderGapBuffer(v2 position, GapBuffer* buffer, RenderBuffer* renderBuffer, RenderBuffer* renderBufferUI, FontGL* font, r32 upperLine=0, r32 bottomLine=0){
     v2 cursor = position;
     cursor += v2(0, FONT_HEIGHT);
 
@@ -43,24 +43,11 @@ void fontRenderGapBuffer(v2 position, GapBuffer* buffer, RenderBuffer* renderBuf
             continue;
         }
 
-        char character = buffer->data[i];
-
-        if(!size){
-            // NOTE(Sarmis) if you ever though you wrote bad code
-            // you never saw this approach/function here
-            keywordPeek(&buffer->data[i], &color, &size);
-        }
-
-        if(size){
-            --size;
-            if(!size){
-                color = DEFAULT_COLOR_TEXT;
-            }
-        }
-
         if(!buffer->data[i]){
             continue;
         }
+        
+        char character = buffer->data[i];
 
         i32 glyphIndex = character - ' ';
         Glyph glyph = font->glyphs[glyphIndex];
@@ -71,6 +58,24 @@ void fontRenderGapBuffer(v2 position, GapBuffer* buffer, RenderBuffer* renderBuf
         } else if(character == '\t'){
             cursor.x += FONT_HEIGHT * 2;
         } else {
+            if(cursor.y < upperLine){
+                continue;
+            } else if(cursor.y > bottomLine){
+                break;
+            }
+
+            if(!size){
+                // NOTE(Sarmis) if you ever though you wrote bad code
+                // you never saw this approach/function here
+                keywordPeek(&buffer->data[i], &color, &size);
+            }
+
+            if(size){
+                --size;
+                if(!size){
+                    color = DEFAULT_COLOR_TEXT;
+                }
+            }
 
             v2 uvs[] = {
                 v2(glyph.x0 / 512.0, glyph.y1 / 512.0),

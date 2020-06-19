@@ -4,6 +4,19 @@
 #include "panel.h"
 #include "gap_buffer.h"
 
+void gotoLineAction(void* data0, void* data1){
+    EditorWindow* window = (EditorWindow*)data0;
+    GapBuffer* lineBuffer = (GapBuffer*)data1;
+
+    char* lineString = gapToString(lineBuffer);
+    u32 line = readU32FromBuffer((u8*)lineString);
+
+    gapSeekCursorToLine(&window->buffer, line);
+    TRACE("Got to line: %d\n", line);
+
+    // clean panel gap buffer
+}
+
 void openFileAction(void* data0, void* data1){
     EditorWindow* window = (EditorWindow*)data0;
     GapBuffer* filenameBuffer = (GapBuffer*)data1;
@@ -22,4 +35,6 @@ void openFileAction(void* data0, void* data1){
 
     window->scrollX = 0;
     window->scrollY = 0;
+
+    // clean panel gap buffer
 }

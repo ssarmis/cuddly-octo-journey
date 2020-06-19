@@ -344,4 +344,28 @@ void operator+=(String& left, String right){
     left = left + right;
 }
 
+static void skipSpacesInBuffer(u8*& buffer){
+    while(*buffer == ' ' || 
+          *buffer == '\t'){
+    
+        ++buffer;
+    }
+}
+
+static u32 readU32FromBuffer(u8* buffer){
+    u32 result = 0;
+    skipSpacesInBuffer(buffer);
+
+    u8 character = *buffer++;
+
+    while((character >= '0' && character <= '9')) {
+        result *= 10;
+        result += character - '0';
+        character = *buffer++;
+    }
+
+    --buffer;
+
+    return result;
+}
 
