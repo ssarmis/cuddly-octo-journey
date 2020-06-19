@@ -108,8 +108,7 @@ Shader createShader(const char* vertexShader, const char* fragmentShader){
 
     result.programId = createAndLinkProgram(2, result.shaders);
     
-    // SHADER_SCOPE(result.programId, {
-     glUseProgram(result.programId);
+    SHADER_SCOPE(result.programId, {
        result.locations.matrixPerspective = shaderGetUniformLocation(result.programId, "matrixPerspective");
         result.locations.matrixTransform = shaderGetUniformLocation(result.programId, "matrixTransform");
         result.locations.matrixView = shaderGetUniformLocation(result.programId, "matrixView");
@@ -118,7 +117,7 @@ Shader createShader(const char* vertexShader, const char* fragmentShader){
         result.locations.boundsRight = shaderGetUniformLocation(result.programId, "boundsRight");
         result.locations.boundsTop = shaderGetUniformLocation(result.programId, "boundsTop");
         result.locations.boundsBottom = shaderGetUniformLocation(result.programId, "boundsBottom");
-    // });
+    });
     return result;
 }
 

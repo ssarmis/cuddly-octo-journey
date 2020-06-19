@@ -680,83 +680,84 @@ int main(int argumentCount, char* arguments[]){
         glBindTexture(GL_TEXTURE_2D, font.textureId);
         
         for(int i = 0; i < windowCount; ++i){
-            windows[i].cursor = v3(windows[i].left, windows[i].top, 0);
-            for(int ii = 0; ii < windows[i].buffer.cursor; ++ii){
-                switch(windows[i].buffer.data[UserToGap(windows[i].buffer.gap, ii)]){
+            EditorWindow* window = &windows[i];
+            window->cursor = v3(window->left, window->top, 0);
+            for(int ii = 0; ii < window->buffer.cursor; ++ii){
+                switch(window->buffer.data[UserToGap(window->buffer.gap, ii)]){
                     case 0:{
                         }
                         break;
 
                     case '\t': {
-                            windows[i].cursor.x += FONT_HEIGHT * 2;
+                            window->cursor.x += FONT_HEIGHT * 2;
                         }
                         break;
 
                     case '\n': {
-                            windows[i].cursor.y += FONT_HEIGHT;
-                            windows[i].cursor.x = windows[i].left;
+                            window->cursor.y += FONT_HEIGHT;
+                            window->cursor.x = window->left;
                         }
                         break;
 
                     default: {
-                            Glyph glyph = font.glyphs[windows[i].buffer.data[UserToGap(windows[i].buffer.gap, ii)] - ' '];
-                            windows[i].cursor.x += glyph.xadvance;
+                            Glyph glyph = font.glyphs[window->buffer.data[UserToGap(window->buffer.gap, ii)] - ' '];
+                            window->cursor.x += glyph.xadvance;
                         }
                         break;
                 }
             }
 
-            windows[i].cursor.y += 3;
-            if(windows[i].cursor.y <= windows[i].scrollTop){
-                i32 distance = windows[i].scrollTop - windows[i].cursor.y;
-                windows[i].transform *= translate({0, distance, 0});
-                windows[i].scrollBottom -= distance;
-                windows[i].scrollTop -= distance;
-            } else if(windows[i].cursor.y >= windows[i].scrollBottom){
-                i32 distance = windows[i].cursor.y - windows[i].scrollBottom + FONT_HEIGHT;
-                windows[i].transform *= translate({0, -distance, 0});
-                windows[i].scrollBottom += distance;
-                windows[i].scrollTop += distance;
+            window->cursor.y += 3;
+            if(window->cursor.y <= window->scrollTop){
+                i32 distance = window->scrollTop - window->cursor.y;
+                window->transform *= translate({0, distance, 0});
+                window->scrollBottom -= distance;
+                window->scrollTop -= distance;
+            } else if(window->cursor.y >= window->scrollBottom){
+                i32 distance = window->cursor.y - window->scrollBottom + FONT_HEIGHT;
+                window->transform *= translate({0, -distance, 0});
+                window->scrollBottom += distance;
+                window->scrollTop += distance;
             }
 
             // current editing line
-            pushQuad(&renderBufferBackground, v3(windows[i].left, windows[i].cursor.y, 0), {windows[i].width, FONT_HEIGHT + 3}, uvs, v3(0, 0, 0));
+            pushQuad(&renderBufferBackground, v3(window->left, window->cursor.y, 0), {window->width, FONT_HEIGHT + 3}, uvs, v3(0, 0, 0));
 
             SHADER_SCOPE(shaderUI.programId, {
-                shaderSetUniform4m(shaderUI.locations.matrixView, windows[i].view);
-                shaderSetUniform4m(shaderUI.locations.matrixTransform, windows[i].transform);
-                shaderSetUniform32u(shaderUI.locations.boundsLeft, windows[i].left);
-                shaderSetUniform32u(shaderUI.locations.boundsRight, windows[i].left + windows[i].width);
-                shaderSetUniform32u(shaderUI.locations.boundsTop, windows[i].top);
-                shaderSetUniform32u(shaderUI.locations.boundsBottom, windows[i].top + windows[i].height);
+                shaderSetUniform4m(shaderUI.locations.matrixView, window->view);
+                shaderSetUniform4m(shaderUI.locations.matrixTransform, window->transform);
+                shaderSetUniform32u(shaderUI.locations.boundsLeft, window->left);
+                shaderSetUniform32u(shaderUI.locations.boundsRight, window->left + window->width);
+                shaderSetUniform32u(shaderUI.locations.boundsTop, window->top);
+                shaderSetUniform32u(shaderUI.locations.boundsBottom, window->top + window->height);
                 flushRenderBuffer(GL_TRIANGLES, &renderBufferBackground);
             });
 
-            fontRenderGapBuffer({windows[i].left, windows[i].top}, &windows[i].buffer, &renderBuffer, &renderBufferUI, &font);
+            fontRenderGapBuffer({window->left, window->top}, &window->buffer, &renderBuffer, &renderBufferUI, &font);
 
             if(i == currentWindowIndex){
                 if(time < 10){
-                    pushQuad(&renderBufferUI, windows[i].cursor, {FONT_HEIGHT / 2, FONT_HEIGHT + 3}, uvs, v3(0, 1, 1));
+                    pushQuad(&renderBufferUI, window->cursor, {FONT_HEIGHT / 2, FONT_HEIGHT + 3}, uvs, v3(0, 1, 1));
                 }
             }
 
             SHADER_SCOPE(shader.programId, {
-                shaderSetUniform4m(shader.locations.matrixView, windows[i].view);
-                shaderSetUniform4m(shader.locations.matrixTransform, windows[i].transform);
-                shaderSetUniform32u(shader.locations.boundsLeft, windows[i].left);
-                shaderSetUniform32u(shader.locations.boundsRight, windows[i].left + windows[i].width);
-                shaderSetUniform32u(shader.locations.boundsTop, windows[i].top);
-                shaderSetUniform32u(shader.locations.boundsBottom, windows[i].top + windows[i].height);
+                shaderSetUniform4m(shader.locations.matrixView, window->view);
+                shaderSetUniform4m(shader.locations.matrixTransform, window->transform);
+                shaderSetUniform32u(shader.locations.boundsLeft, window->left);
+                shaderSetUniform32u(shader.locations.boundsRight, window->left + window->width);
+                shaderSetUniform32u(shader.locations.boundsTop, window->top);
+                shaderSetUniform32u(shader.locations.boundsBottom, window->top + window->height);
                 flushRenderBuffer(GL_TRIANGLES, &renderBuffer);
             });
 
             SHADER_SCOPE(shaderUI.programId, {
-                shaderSetUniform4m(shaderUI.locations.matrixView, windows[i].view);
-                shaderSetUniform4m(shaderUI.locations.matrixTransform, windows[i].transform);
-                shaderSetUniform32u(shaderUI.locations.boundsLeft, windows[i].left);
-                shaderSetUniform32u(shaderUI.locations.boundsRight, windows[i].left + windows[i].width);
-                shaderSetUniform32u(shaderUI.locations.boundsTop, windows[i].top);
-                shaderSetUniform32u(shaderUI.locations.boundsBottom, windows[i].top + windows[i].height);
+                shaderSetUniform4m(shaderUI.locations.matrixView, window->view);
+                shaderSetUniform4m(shaderUI.locations.matrixTransform, window->transform);
+                shaderSetUniform32u(shaderUI.locations.boundsLeft, window->left);
+                shaderSetUniform32u(shaderUI.locations.boundsRight, window->left + window->width);
+                shaderSetUniform32u(shaderUI.locations.boundsTop, window->top);
+                shaderSetUniform32u(shaderUI.locations.boundsBottom, window->top + window->height);
                 flushRenderBuffer(GL_TRIANGLES, &renderBufferUI);
             });
         }
