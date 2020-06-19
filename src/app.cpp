@@ -10,19 +10,25 @@
 #include "gap_buffer.h"
 #include "linked_lines.h"
 #include "selection.h"
+#include "window.h"
 
 #include <time.h>
 
 #define TURBO_TIME 1
 
-int windowWidth = 1280;
-int windowHeight = 768;
-u32 windowTop = 0;
-u32 windowBottom = windowHeight;
-m4 windowTransform = m4();
-m4 windowView = m4();
+u32 windowWidth = 1280;
+u32 windowHeight = 768;
 
-int main(){
+u32 windowCount = 2;
+EditorWindow windows[2] = {
+    windowCreate(windowWidth / 2, windowHeight, 0, 0),
+    windowCreate(windowWidth / 2, windowHeight, windowWidth / 2, 0)
+};
+
+u32 currentWindowIndex = 0;
+EditorWindow* currentWindow = &windows[currentWindowIndex];
+
+int main(int argumentCount, char* arguments[]){
 #if 1
     if(SDL_Init(SDL_INIT_EVERYTHING) < 0){
         TRACE("Could not initialize SDL2\n");
@@ -112,9 +118,6 @@ int main(){
 
     u32 backspaceTime = 0;
     u32 arrowTime = 0;
-
-    v3 cursor = {};
-    i32 cursorPointer = 0;
 #endif
 
     // GapBuffer buffer = {};
@@ -125,7 +128,11 @@ int main(){
     // buffer.gap.start = 0;
     // buffer.gap.end = GAP_DEFAULT_SIZE;
 
-    GapBuffer buffer = gapReadFile("src/app.cpp");
+    if(argumentCount > 1){
+        currentWindow->buffer = gapReadFile(arguments[1]);
+    } else {
+        currentWindow->buffer = gapCreateEmpty();
+    }
 
 #if 1
     bool shiftPressed = false;
@@ -151,7 +158,7 @@ int main(){
     shiftCharactersLUT['\\'] = '|';
     shiftCharactersLUT['/'] = '?';
     shiftCharactersLUT[','] = '<';
-    shiftCharactersLUT[','] = '<';
+    shiftCharactersLUT['.'] = '>';
     shiftCharactersLUT['='] = '+';
     shiftCharactersLUT['-'] = '_';
 
@@ -169,23 +176,35 @@ int main(){
                 case SDL_WINDOWEVENT: {
                         switch(event.window.event){
                             case SDL_WINDOWEVENT_SIZE_CHANGED: {
-                                    windowWidth = event.window.data1;
-                                    windowHeight = event.window.data2;
+                                    u32 newWidth = event.window.data1;
+                                    u32 newHeight = event.window.data2;
                                     // TODO(Sarmis) I have to fix these 
                                     // depending on the new size,
                                     // the already existing offset needs to 
                                     // update
-                                    windowBottom = windowHeight;
+                                    for(int i = 0; i < windowCount; ++i){
+                                        r32 wr = windows[i].width / windowWidth;
+                                        r32 hr = windows[i].height / windowHeight;
+
+                                        windows[i].width = wr * newWidth;
+                                        windows[i].height = hr * newHeight;
+                                        windows[i].top = hr * newHeight;
+
+                                        windows[i].bottom = windows[i].top + windows[i].height;
+                                    }
 
                                     SHADER_SCOPE(shader.programId, {
                                         shaderSetUniform4m(shader.locations.matrixPerspective, 
-                                                        orthographic(0, windowWidth, 0, windowHeight));
+                                                        orthographic(0, newWidth, 0, newHeight));
                                     });
 
                                     SHADER_SCOPE(shaderUI.programId, {
                                         shaderSetUniform4m(shaderUI.locations.matrixPerspective, 
-                                                        orthographic(0, windowWidth, 0, windowHeight));
+                                                        orthographic(0, newWidth, 0, newHeight));
                                     });
+
+                                    windowWidth = newWidth;
+                                    windowHeight = newHeight;
                                 }
                                 break;
                         }
@@ -286,7 +305,7 @@ int main(){
                             case SDL_SCANCODE_PAGEUP: {
                                     if(pageUpReleased){
                                         u32 heightInLines = windowHeight / FONT_HEIGHT;
-                                        gapSeekCursorINewlinesIfPossible(&buffer, -heightInLines);
+                                        gapSeekCursorINewlinesIfPossible(&currentWindow->buffer, -heightInLines);
                                     }
                                     pageUpReleased = false;
                                 }
@@ -298,7 +317,7 @@ int main(){
                                     // after scroll was done
                                     if(pageDownReleased){
                                         u32 heightInLines = windowHeight / FONT_HEIGHT;
-                                        gapSeekCursorINewlinesIfPossible(&buffer, heightInLines);
+                                        gapSeekCursorINewlinesIfPossible(&currentWindow->buffer, heightInLines);
                                     }
                                     pageDownReleased = false;
                                 }
@@ -307,22 +326,22 @@ int main(){
                             case SDL_SCANCODE_HOME: {
                                     if(homeReleased){
                                         if(shiftPressed){
-                                            if(!gapGetSelectionSize(&buffer)){
+                                            if(!gapGetSelectionSize(&currentWindow->buffer)){
                                                 // there is no current selection alive
-                                                buffer.selection.end = buffer.cursor;
+                                                currentWindow->buffer.selection.end = currentWindow->buffer.cursor;
                                             }
                                         } else {
-                                            buffer.selection.start = buffer.selection.end;
+                                            currentWindow->buffer.selection.start = currentWindow->buffer.selection.end;
                                         }
 
-                                        gapSeekCursorToPreviousNewline(&buffer);
+                                        gapSeekCursorToPreviousNewline(&currentWindow->buffer);
 
-                                        if(buffer.data[UserToGap(buffer.gap, buffer.cursor)] == '\n'){
-                                            gapIncreaseCursor(&buffer);
+                                        if(currentWindow->buffer.data[UserToGap(currentWindow->buffer.gap, currentWindow->buffer.cursor)] == '\n'){
+                                            gapIncreaseCursor(&currentWindow->buffer);
                                         }
 
                                         if(shiftPressed){
-                                            buffer.selection.start = buffer.cursor;
+                                            currentWindow->buffer.selection.start = currentWindow->buffer.cursor;
                                         }
                                     }
                                     homeReleased = false;
@@ -332,20 +351,20 @@ int main(){
                             case SDL_SCANCODE_END: {
                                     if(endReleased){
                                         if(shiftPressed){
-                                            if(!gapGetSelectionSize(&buffer)){
+                                            if(!gapGetSelectionSize(&currentWindow->buffer)){
                                                 // there is no current selection alive
-                                                buffer.selection.start = buffer.cursor;
+                                                currentWindow->buffer.selection.start = currentWindow->buffer.cursor;
                                             }
                                         } else {
-                                            buffer.selection.start = buffer.selection.end;
+                                            currentWindow->buffer.selection.start = currentWindow->buffer.selection.end;
                                         }
 
-                                        if(buffer.data[UserToGap(buffer.gap, buffer.cursor)] != '\n'){
-                                            gapSeekCursorToNewline(&buffer);
+                                        if(currentWindow->buffer.data[UserToGap(currentWindow->buffer.gap, currentWindow->buffer.cursor)] != '\n'){
+                                            gapSeekCursorToNewline(&currentWindow->buffer);
                                         }
 
                                         if(shiftPressed){
-                                            buffer.selection.end = buffer.cursor;
+                                            currentWindow->buffer.selection.end = currentWindow->buffer.cursor;
                                         }
                                     }
                                     endReleased = false;
@@ -359,8 +378,14 @@ int main(){
                             case SDL_SCANCODE_TAB: {
                                     u8 tab = '\t';
                                     if(tabReleased){
-                                        gapInsertCharacterAt(&buffer, tab, buffer.cursor);
-                                        gapIncreaseCursor(&buffer);
+                                        if(controlSeeking){
+                                            ++currentWindowIndex;
+                                            currentWindowIndex %= windowCount;
+                                            currentWindow = &windows[currentWindowIndex];
+                                        } else {
+                                            gapInsertCharacterAt(&currentWindow->buffer, tab, currentWindow->buffer.cursor);
+                                            gapIncreaseCursor(&currentWindow->buffer);
+                                        }
                                     }
                                     tabReleased = false;
                                 }
@@ -369,14 +394,14 @@ int main(){
                             case SDL_SCANCODE_RETURN2: case SDL_SCANCODE_RETURN: {
                                     u8 newline = '\n';
                                     if(newlineReleased){
-                                        i32 tabs = gapGetAmontOfTabsBeforeCursor(&buffer);
+                                        i32 tabs = gapGetAmontOfTabsBeforeCursor(&currentWindow->buffer);
 
-                                        gapInsertCharacterAt(&buffer, newline, buffer.cursor);
-                                        gapIncreaseCursor(&buffer);
+                                        gapInsertCharacterAt(&currentWindow->buffer, newline, currentWindow->buffer.cursor);
+                                        gapIncreaseCursor(&currentWindow->buffer);
 
                                         while(tabs--){
-                                            gapInsertCharacterAt(&buffer, '\t', buffer.cursor);
-                                            gapIncreaseCursor(&buffer);
+                                            gapInsertCharacterAt(&currentWindow->buffer, '\t', currentWindow->buffer.cursor);
+                                            gapIncreaseCursor(&currentWindow->buffer);
                                         }
                                     }
                                     newlineReleased = false;
@@ -385,32 +410,32 @@ int main(){
 
                             case SDL_SCANCODE_UP: {
                                     if(arrowReleased[1] || arrowTurbo){
-                                        i32 distance = gapGetDistanceFromPreviousNewline(&buffer);
+                                        i32 distance = gapGetDistanceFromPreviousNewline(&currentWindow->buffer);
 
                                         if(shiftPressed){
-                                            if(!gapGetSelectionSize(&buffer)){
+                                            if(!gapGetSelectionSize(&currentWindow->buffer)){
                                                 // there is no current selection alive
-                                                buffer.selection.end = buffer.cursor;
+                                                currentWindow->buffer.selection.end = currentWindow->buffer.cursor;
                                             }
                                         } else {
-                                            buffer.selection.start = buffer.selection.end;
+                                            currentWindow->buffer.selection.start = currentWindow->buffer.selection.end;
                                         }
 
                                         if(controlSeeking){
-                                            gapSeekCursorINewlinesIfPossible(&buffer, -10);
+                                            gapSeekCursorINewlinesIfPossible(&currentWindow->buffer, -10);
                                         } else {
-                                            gapSeekCursorToPreviousNewline(&buffer);
-                                            if(buffer.cursor - 1 >= 0){
-                                                i32 distanceOnPreviousLine = gapGetDistanceFromPreviousNewline(&buffer);
+                                            gapSeekCursorToPreviousNewline(&currentWindow->buffer);
+                                            if(currentWindow->buffer.cursor - 1 >= 0){
+                                                i32 distanceOnPreviousLine = gapGetDistanceFromPreviousNewline(&currentWindow->buffer);
                                                 distanceOnPreviousLine -= distance;
                                                 if(distanceOnPreviousLine >= 0){
-                                                    gapSeekCursor(&buffer, -distanceOnPreviousLine);
+                                                    gapSeekCursor(&currentWindow->buffer, -distanceOnPreviousLine);
                                                 }
                                             }
                                         }
 
                                         if(shiftPressed){
-                                            buffer.selection.start = buffer.cursor;
+                                            currentWindow->buffer.selection.start = currentWindow->buffer.cursor;
                                         }
                                     } else {
                                         arrowTime++;
@@ -424,35 +449,35 @@ int main(){
 
                             case SDL_SCANCODE_DOWN: {
                                     if(arrowReleased[0] || arrowTurbo){
-                                        i32 distance = gapGetDistanceFromPreviousNewline(&buffer);
+                                        i32 distance = gapGetDistanceFromPreviousNewline(&currentWindow->buffer);
 
                                         if(shiftPressed){
-                                            if(!gapGetSelectionSize(&buffer)){
+                                            if(!gapGetSelectionSize(&currentWindow->buffer)){
                                                 // there is no current selection alive
-                                                buffer.selection.start = buffer.cursor;
+                                                currentWindow->buffer.selection.start = currentWindow->buffer.cursor;
                                             }
                                         } else {
-                                            buffer.selection.start = buffer.selection.end;
+                                            currentWindow->buffer.selection.start = currentWindow->buffer.selection.end;
                                         }
 
                                         if(controlSeeking){
-                                            gapSeekCursorINewlinesIfPossible(&buffer, 10);
+                                            gapSeekCursorINewlinesIfPossible(&currentWindow->buffer, 10);
                                         } else {
-                                            gapSeekCursorToNewline(&buffer);
+                                            gapSeekCursorToNewline(&currentWindow->buffer);
 
-                                            if(buffer.cursor + 1 < buffer.size){
-                                                gapIncreaseCursor(&buffer);
-                                                i32 lineLength = gapGetDistanceToNewline(&buffer);
+                                            if(currentWindow->buffer.cursor + 1 < currentWindow->buffer.size){
+                                                gapIncreaseCursor(&currentWindow->buffer);
+                                                i32 lineLength = gapGetDistanceToNewline(&currentWindow->buffer);
                                                 if(distance <= lineLength){
-                                                    gapSeekCursor(&buffer, distance - 1);
+                                                    gapSeekCursor(&currentWindow->buffer, distance - 1);
                                                 } else {
-                                                    gapSeekCursor(&buffer, lineLength);
+                                                    gapSeekCursor(&currentWindow->buffer, lineLength);
                                                 }
                                             }
                                         }
 
                                         if(shiftPressed){
-                                            buffer.selection.end = buffer.cursor;
+                                            currentWindow->buffer.selection.end = currentWindow->buffer.cursor;
                                         }
                                     } else {
                                         arrowTime++;
@@ -467,25 +492,25 @@ int main(){
                             case SDL_SCANCODE_LEFT: {
                                     if(arrowReleased[3] || arrowTurbo){
                                         if(shiftPressed){
-                                            if(!gapGetSelectionSize(&buffer)){
+                                            if(!gapGetSelectionSize(&currentWindow->buffer)){
                                                 // there is no current selection alive
-                                                buffer.selection.end = buffer.cursor;
+                                                currentWindow->buffer.selection.end = currentWindow->buffer.cursor;
                                             }
                                         } else {
-                                            buffer.selection.start = buffer.selection.end;
+                                            currentWindow->buffer.selection.start = currentWindow->buffer.selection.end;
                                         }
 
                                         if(controlSeeking){
-                                            gapSeekCursorToPreviousCapitalOrSpace(&buffer);
-                                            if(buffer.data[UserToGap(buffer.gap, buffer.cursor)] == '\n'){
-                                                gapIncreaseCursor(&buffer);
+                                            gapSeekCursorToPreviousCapitalOrSpace(&currentWindow->buffer);
+                                            if(currentWindow->buffer.data[UserToGap(currentWindow->buffer.gap, currentWindow->buffer.cursor)] == '\n'){
+                                                gapIncreaseCursor(&currentWindow->buffer);
                                             }
                                         } else {
-                                            gapDecreaseCursor(&buffer);
+                                            gapDecreaseCursor(&currentWindow->buffer);
                                         }
 
                                         if(shiftPressed){
-                                            buffer.selection.start = buffer.cursor;
+                                            currentWindow->buffer.selection.start = currentWindow->buffer.cursor;
                                         }
                                     } else {
                                         arrowTime++;
@@ -500,22 +525,22 @@ int main(){
                             case SDL_SCANCODE_RIGHT: {
                                     if(arrowReleased[2] || arrowTurbo){
                                         if(shiftPressed){
-                                            if(!gapGetSelectionSize(&buffer)){
+                                            if(!gapGetSelectionSize(&currentWindow->buffer)){
                                                 // there is no current selection alive
-                                                buffer.selection.start = buffer.cursor;
+                                                currentWindow->buffer.selection.start = currentWindow->buffer.cursor;
                                             }
                                         } else {
-                                            buffer.selection.start = buffer.selection.end;
+                                            currentWindow->buffer.selection.start = currentWindow->buffer.selection.end;
                                         }
 
                                         if(controlSeeking){
-                                            gapSeekCursorToCapitalOrSpace(&buffer);
+                                            gapSeekCursorToCapitalOrSpace(&currentWindow->buffer);
                                         } else {
-                                            gapIncreaseCursor(&buffer);
+                                            gapIncreaseCursor(&currentWindow->buffer);
                                         }
 
                                         if(shiftPressed){
-                                            buffer.selection.end = buffer.cursor;
+                                            currentWindow->buffer.selection.end = currentWindow->buffer.cursor;
                                         }
                                     } else {
                                         arrowTime++;
@@ -529,7 +554,12 @@ int main(){
 
                             case SDL_SCANCODE_DELETE: {
                                     if(backspaceReleased || backspaceTurbo){
-                                        gapRemoveCharacterNearAt(&buffer, buffer.cursor);
+                                        if(gapGetSelectionSize(&currentWindow->buffer)){
+                                            gapRemoveCharactersInRange(&currentWindow->buffer, currentWindow->buffer.selection.start, currentWindow->buffer.selection.end);
+                                            gapSeekCursor(&currentWindow->buffer, -(currentWindow->buffer.selection.end - currentWindow->buffer.selection.start));
+                                        } else {
+                                            gapRemoveCharacterNearAt(&currentWindow->buffer, currentWindow->buffer.cursor);
+                                        }
                                     } else {
                                         backspaceTime++;
                                         if (backspaceTime >= TURBO_TIME){
@@ -543,8 +573,20 @@ int main(){
 
                             case SDL_SCANCODE_BACKSPACE: {
                                     if(backspaceReleased || backspaceTurbo){
-                                        gapRemoveCharacterAt(&buffer, buffer.cursor);
-                                        gapDecreaseCursor(&buffer);
+                                        if(gapGetSelectionSize(&currentWindow->buffer)){
+                                            gapRemoveCharactersInRange(&currentWindow->buffer, currentWindow->buffer.selection.start, currentWindow->buffer.selection.end);
+                                            gapSeekCursor(&currentWindow->buffer, -(currentWindow->buffer.selection.end - currentWindow->buffer.selection.start));
+                                        } else {
+                                            if(!controlSeeking){
+                                                gapRemoveCharacterAt(&currentWindow->buffer, currentWindow->buffer.cursor);
+                                                gapDecreaseCursor(&currentWindow->buffer);
+                                            } else {
+                                                u32 end = currentWindow->buffer.cursor;
+                                                gapSeekCursorToPreviousCapitalOrSpace(&currentWindow->buffer);
+                                                u32 start = currentWindow->buffer.cursor + 1;
+                                                gapRemoveCharactersInRange(&currentWindow->buffer, start, end);
+                                            }
+                                        }
                                     } else {
                                         backspaceTime++;
                                         if (backspaceTime >= TURBO_TIME){
@@ -561,16 +603,29 @@ int main(){
                                         character = shiftCharactersLUT[character];
                                     }
                                     if(!controlSeeking){
-                                        gapInsertCharacterAt(&buffer, character, buffer.cursor);
-                                        gapIncreaseCursor(&buffer);
+                                        gapInsertCharacterAt(&currentWindow->buffer, character, currentWindow->buffer.cursor);
+                                        gapIncreaseCursor(&currentWindow->buffer);
                                     } else {
                                         switch (character) {
+                                            case 's': {
+                                                    if(currentWindow->buffer.dirty){
+                                                    }
+
+                                                    if(!currentWindow->buffer.file){
+                                                        // file is not on disk
+                                                        // this is the first save ever
+                                                        // for this file...
+                                                        gapWriteFile(&currentWindow->buffer, "lol.tmp");
+                                                    }
+                                                }
+                                                break;
+
                                             case 'v': {
                                                     if(SDL_HasClipboardText()){
                                                         char* clipboard = SDL_GetClipboardText();
                                                         if(clipboard){
-                                                            i32 distance = gapInsertNullTerminatedStringAt(&buffer, clipboard, buffer.cursor);
-                                                            gapSeekCursor(&buffer, distance);
+                                                            i32 distance = gapInsertNullTerminatedStringAt(&currentWindow->buffer, clipboard, currentWindow->buffer.cursor);
+                                                            gapSeekCursor(&currentWindow->buffer, distance);
                                                             SDL_free(clipboard);
                                                         }
                                                     }
@@ -579,10 +634,12 @@ int main(){
 
                                             case 'c': {
                                                     String copy = {};
-                                                    if(buffer.selection.end < buffer.gap.start){
-                                                        copy = subString(buffer.bufferString, buffer.selection.start, buffer.selection.end);
+                                                    // TODO(Sarmis) solve case in which 
+                                                    // the gap in in the selection
+                                                    if(currentWindow->buffer.selection.end < currentWindow->buffer.gap.start){
+                                                        copy = subString(currentWindow->buffer.bufferString, currentWindow->buffer.selection.start, currentWindow->buffer.selection.end);
                                                     } else {
-                                                        copy = subString(buffer.bufferString, UserToGap(buffer.gap, buffer.selection.start), UserToGap(buffer.gap, buffer.selection.end));
+                                                        copy = subString(currentWindow->buffer.bufferString, UserToGap(currentWindow->buffer.gap, currentWindow->buffer.selection.start), UserToGap(currentWindow->buffer.gap, currentWindow->buffer.selection.end));
                                                     }
                                                     i32 status = SDL_SetClipboardText((char*)copy.data);
                                                     if(status){
@@ -597,7 +654,7 @@ int main(){
                                                 break;
                                         }
                                     }
-                                    buffer.selection.end = buffer.selection.start;
+                                    currentWindow->buffer.selection.end = currentWindow->buffer.selection.start;
                                 }
                                 break;
                         }
@@ -616,79 +673,93 @@ int main(){
 
         glViewport(0, 0, windowWidth, windowHeight);
 
-        glClearColor(0.1, 0.1, 0.1, 1);
+        glClearColor(DEFAULT_COLOR_BACKGROUND.x, DEFAULT_COLOR_BACKGROUND.y, DEFAULT_COLOR_BACKGROUND.z, 1);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
         glActiveTexture(GL_TEXTURE0);
         glBindTexture(GL_TEXTURE_2D, font.textureId);
         
-        cursor.y += 2;
-        cursor = v3();
-        for(int i = 0; i < buffer.cursor; ++i){
-            switch(buffer.data[UserToGap(buffer.gap, i)]){
-                case 0:{
-                    }
-                    break;
+        for(int i = 0; i < windowCount; ++i){
+            windows[i].cursor = v3(windows[i].left, windows[i].top, 0);
+            for(int ii = 0; ii < windows[i].buffer.cursor; ++ii){
+                switch(windows[i].buffer.data[UserToGap(windows[i].buffer.gap, ii)]){
+                    case 0:{
+                        }
+                        break;
 
-                case '\t': {
-                        cursor.x += FONT_HEIGHT * 2;
-                    }
-                    break;
+                    case '\t': {
+                            windows[i].cursor.x += FONT_HEIGHT * 2;
+                        }
+                        break;
 
-                case '\n': {
-                        cursor.y += FONT_HEIGHT;
-                        cursor.x = 0;
-                    }
-                    break;
+                    case '\n': {
+                            windows[i].cursor.y += FONT_HEIGHT;
+                            windows[i].cursor.x = windows[i].left;
+                        }
+                        break;
 
-                default: {
-                        Glyph glyph = font.glyphs[buffer.data[UserToGap(buffer.gap, i)] - ' '];
-                        cursor.x += glyph.xadvance;
-                    }
-                    break;
+                    default: {
+                            Glyph glyph = font.glyphs[windows[i].buffer.data[UserToGap(windows[i].buffer.gap, ii)] - ' '];
+                            windows[i].cursor.x += glyph.xadvance;
+                        }
+                        break;
+                }
             }
+
+            windows[i].cursor.y += 3;
+            if(windows[i].cursor.y <= windows[i].scrollTop){
+                i32 distance = windows[i].scrollTop - windows[i].cursor.y;
+                windows[i].transform *= translate({0, distance, 0});
+                windows[i].scrollBottom -= distance;
+                windows[i].scrollTop -= distance;
+            } else if(windows[i].cursor.y >= windows[i].scrollBottom){
+                i32 distance = windows[i].cursor.y - windows[i].scrollBottom + FONT_HEIGHT;
+                windows[i].transform *= translate({0, -distance, 0});
+                windows[i].scrollBottom += distance;
+                windows[i].scrollTop += distance;
+            }
+
+            // current editing line
+            pushQuad(&renderBufferBackground, v3(windows[i].left, windows[i].cursor.y, 0), {windows[i].width, FONT_HEIGHT + 3}, uvs, v3(0, 0, 0));
+
+            SHADER_SCOPE(shaderUI.programId, {
+                shaderSetUniform4m(shaderUI.locations.matrixView, windows[i].view);
+                shaderSetUniform4m(shaderUI.locations.matrixTransform, windows[i].transform);
+                shaderSetUniform32u(shaderUI.locations.boundsLeft, windows[i].left);
+                shaderSetUniform32u(shaderUI.locations.boundsRight, windows[i].left + windows[i].width);
+                shaderSetUniform32u(shaderUI.locations.boundsTop, windows[i].top);
+                shaderSetUniform32u(shaderUI.locations.boundsBottom, windows[i].top + windows[i].height);
+                flushRenderBuffer(GL_TRIANGLES, &renderBufferBackground);
+            });
+
+            fontRenderGapBuffer({windows[i].left, windows[i].top}, &windows[i].buffer, &renderBuffer, &renderBufferUI, &font);
+
+            if(i == currentWindowIndex){
+                if(time < 10){
+                    pushQuad(&renderBufferUI, windows[i].cursor, {FONT_HEIGHT / 2, FONT_HEIGHT + 3}, uvs, v3(0, 1, 1));
+                }
+            }
+
+            SHADER_SCOPE(shader.programId, {
+                shaderSetUniform4m(shader.locations.matrixView, windows[i].view);
+                shaderSetUniform4m(shader.locations.matrixTransform, windows[i].transform);
+                shaderSetUniform32u(shader.locations.boundsLeft, windows[i].left);
+                shaderSetUniform32u(shader.locations.boundsRight, windows[i].left + windows[i].width);
+                shaderSetUniform32u(shader.locations.boundsTop, windows[i].top);
+                shaderSetUniform32u(shader.locations.boundsBottom, windows[i].top + windows[i].height);
+                flushRenderBuffer(GL_TRIANGLES, &renderBuffer);
+            });
+
+            SHADER_SCOPE(shaderUI.programId, {
+                shaderSetUniform4m(shaderUI.locations.matrixView, windows[i].view);
+                shaderSetUniform4m(shaderUI.locations.matrixTransform, windows[i].transform);
+                shaderSetUniform32u(shaderUI.locations.boundsLeft, windows[i].left);
+                shaderSetUniform32u(shaderUI.locations.boundsRight, windows[i].left + windows[i].width);
+                shaderSetUniform32u(shaderUI.locations.boundsTop, windows[i].top);
+                shaderSetUniform32u(shaderUI.locations.boundsBottom, windows[i].top + windows[i].height);
+                flushRenderBuffer(GL_TRIANGLES, &renderBufferUI);
+            });
         }
-        
-        cursor.y += 3;
-        if(cursor.y <= windowTop){
-            i32 distance = windowTop - cursor.y;
-            windowTransform *= translate({0, distance, 0});
-            windowBottom -= distance;
-            windowTop -= distance;
-        } else if(cursor.y >= windowBottom){
-            i32 distance = cursor.y - windowBottom + FONT_HEIGHT;
-            windowTransform *= translate({0, -distance, 0});
-            windowBottom += distance;
-            windowTop += distance;
-        }
-
-        pushQuad(&renderBufferBackground, v3(0, cursor.y, 0), {windowWidth, FONT_HEIGHT + 3}, uvs, v3(0, 0, 0));
-
-        SHADER_SCOPE(shaderUI.programId, {
-            shaderSetUniform4m(shaderUI.locations.matrixView, windowView);
-            shaderSetUniform4m(shaderUI.locations.matrixTransform, windowTransform);
-            flushRenderBuffer(GL_TRIANGLES, &renderBufferBackground);
-        });
-
-        fontRenderGapBuffer(&buffer, &renderBuffer, &renderBufferUI, &font);
-
-        if(time < 10){
-            pushQuad(&renderBufferUI, cursor, {FONT_HEIGHT / 2, FONT_HEIGHT + 3}, uvs, v3(0, 1, 1));
-        }
-
-        SHADER_SCOPE(shader.programId, {
-            shaderSetUniform4m(shader.locations.matrixView, windowView);
-            shaderSetUniform4m(shader.locations.matrixTransform, windowTransform);
-            flushRenderBuffer(GL_TRIANGLES, &renderBuffer);
-        });
-
-
-        SHADER_SCOPE(shaderUI.programId, {
-            shaderSetUniform4m(shaderUI.locations.matrixView, windowView);
-            shaderSetUniform4m(shaderUI.locations.matrixTransform, windowTransform);
-            flushRenderBuffer(GL_TRIANGLES, &renderBufferUI);
-        });
-        
 
         SDL_GL_SwapWindow(window);
     }

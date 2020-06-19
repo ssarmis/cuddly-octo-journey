@@ -7,8 +7,8 @@
 #define UserToGap(gap, x) (((x) < gap.start) ? (x) :( (gap.end - gap.start) + (x)))
 
 struct Gap {
-    u32 start;
-    u32 end;
+    i32 start;
+    i32 end;
 };
 
 struct Selection {
@@ -17,6 +17,7 @@ struct Selection {
 };
 
 struct GapBuffer {
+    bool dirty;
     FILE* file;
     union{
         String bufferString;
@@ -131,6 +132,8 @@ void gapExtendGapBackwards(GapBuffer* buffer){
 }
 
 void gapInsertCharacterAt(GapBuffer* buffer, char character, u32 position){
+    buffer->dirty = true;
+
     gapMoveGap(buffer, UserToGap(buffer->gap, position));
 
     gapReplaceCharacterAt(buffer, character, buffer->gap.start);
@@ -142,11 +145,13 @@ void gapInsertCharacterAt(GapBuffer* buffer, char character, u32 position){
 }
 
 void gapRemoveCharacterNearAt(GapBuffer* buffer, u32 position){
+    buffer->dirty = true;
     gapMoveGap(buffer, UserToGap(buffer->gap, position));
     gapExtendGapBackwards(buffer); // basically ++gap.end
 }
 
 void gapRemoveCharacterAt(GapBuffer* buffer, u32 position){
+    buffer->dirty = true;
     gapMoveGap(buffer, UserToGap(buffer->gap, position));
     gapExtendGap(buffer); // basically --gap.start
 }
@@ -241,7 +246,7 @@ i32 gapGetAmontOfTabsBeforeCursor(GapBuffer* buffer){
         }
 
         --clone;
-        if(clone <= 0){
+        if(clone < 0){
             break;
         }
         convertedCursor = UserToGap(buffer->gap, clone);
@@ -300,6 +305,7 @@ void gapSeekCursorToCapitalOrSpace(GapBuffer* buffer){
     // TODO(Sarmis) since the end of the buffer might me bagic
     // just let this here for now..
     while(buffer->data[convertedCursor] != '\n' &&
+          buffer->data[convertedCursor] != '"' &&
           buffer->data[convertedCursor] != ' ' &&
           buffer->data[convertedCursor] != '!' &&
           buffer->data[convertedCursor] != '@' &&
@@ -337,7 +343,9 @@ void gapSeekCursorToPreviousCapitalOrSpace(GapBuffer* buffer){
     // Ok for real I will make a function to see if its a symbol instead
     // of untolling it
     while(buffer->data[convertedCursor] != '\n' &&
+          buffer->data[convertedCursor] != '"' &&
           buffer->data[convertedCursor] != ' ' &&
+          buffer->data[convertedCursor] != '#' &&
           buffer->data[convertedCursor] != '!' &&
           buffer->data[convertedCursor] != '@' &&
           buffer->data[convertedCursor] != '#' &&
@@ -384,7 +392,19 @@ void gapSeekCursorINewlinesIfPossible(GapBuffer* buffer, i32 amount){
     }
 }
 
+void gapRemoveCharactersInRange(GapBuffer* buffer, i32 start, i32 end){
+    buffer->dirty = true;
+    // start = UserToGap(buffer->gap, start);
+    // end = UserToGap(buffer->gap, end);
+    i32 distance = end - start;
+    while(distance--){
+        gapRemoveCharacterAt(buffer, end--);
+    }
+}
+
 i32 gapInsertNullTerminatedStringAt(GapBuffer* buffer, char* string, i32 position){
+    buffer->dirty = true;
+
     i32 clone = position;
     while(*string){
         gapInsertCharacterAt(buffer, *string, position++);
@@ -393,8 +413,25 @@ i32 gapInsertNullTerminatedStringAt(GapBuffer* buffer, char* string, i32 positio
     return (position - clone);
 }
 
+GapBuffer gapCreateEmpty(){
+    GapBuffer result = {};
+
+    result.dirty = true;
+    result.file = NULL;
+    result.data = new u8[GAP_DEFAULT_SIZE];
+    memset(result.data, 0, GAP_DEFAULT_SIZE);
+    result.size = GAP_DEFAULT_SIZE;
+    result.cursor = 0;
+    result.gap.start = 0;
+    result.gap.end = GAP_DEFAULT_SIZE;
+
+    return result;
+}
+
 GapBuffer gapReadFile(const char* filename){
     GapBuffer result = {};
+    
+    result.dirty = false;
 
     FILE* file = fopen(filename, "rb");
     
@@ -420,3 +457,13 @@ GapBuffer gapReadFile(const char* filename){
     return result;
 }
 
+void gapWriteFile(GapBuffer* buffer, const char* filename){
+    FILE* file = fopen(filename, "wb");
+    
+    buffer->dirty = false;
+    buffer->file = file;
+
+    fwrite(buffer->data, sizeof(u8), buffer->gap.start, file);
+    fwrite(buffer->data + buffer->gap.end, sizeof(u8), buffer->size - buffer->gap.end, file);
+    fclose(file);
+}

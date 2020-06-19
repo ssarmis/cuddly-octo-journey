@@ -55,10 +55,20 @@ out v4 outputColor;
 
 uniform sampler2D materialTextures;
 
+uniform u32 boundsLeft;
+uniform u32 boundsRight;
+uniform u32 boundsTop;
+uniform u32 boundsBottom;
+
 void main(){
-    v4 sampledColor = texture(materialTextures, v2(vertexUVOut.x, vertexUVOut.y));
-    outputColor = v4(vertexColorOut, 1);
-    outputColor.w = sampledColor.x;
+    if(gl_FragCoord.x >= boundsLeft && gl_FragCoord.x <= boundsRight &&
+       gl_FragCoord.y >= boundsTop && gl_FragCoord.y <= boundsBottom){
+        v4 sampledColor = texture(materialTextures, v2(vertexUVOut.x, vertexUVOut.y));
+        outputColor = v4(vertexColorOut, 1);
+        outputColor.w = sampledColor.x;
+    } else {
+        discard;
+    }
 }
 
 )";
@@ -116,11 +126,21 @@ in v3 vertexColorOut;
 
 out v4 outputColor;
 
+uniform u32 boundsLeft;
+uniform u32 boundsRight;
+uniform u32 boundsTop;
+uniform u32 boundsBottom;
+
 uniform sampler2D materialTextures;
 
 void main(){
-    outputColor = v4(vertexColorOut, 1);
-    outputColor.w = 0.5;
+    if(gl_FragCoord.x >= boundsLeft && gl_FragCoord.x <= boundsRight &&
+       gl_FragCoord.y >= boundsTop && gl_FragCoord.y <= boundsBottom){
+        outputColor = v4(vertexColorOut, 1);
+        outputColor.w = 0.5;
+    } else {
+        discard;
+    }
 }
 
 )";

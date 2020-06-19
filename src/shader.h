@@ -20,6 +20,11 @@ struct UniformLocations {
     GLint matrixPerspective;
     GLint matrixTransform;
     GLint matrixView;
+
+    GLint boundsLeft;
+    GLint boundsRight;
+    GLint boundsTop;
+    GLint boundsBottom;
 };
 
 struct Shader {
@@ -103,11 +108,17 @@ Shader createShader(const char* vertexShader, const char* fragmentShader){
 
     result.programId = createAndLinkProgram(2, result.shaders);
     
-    SHADER_SCOPE(result.programId, {
-        result.locations.matrixPerspective = shaderGetUniformLocation(result.programId, "matrixPerspective");
+    // SHADER_SCOPE(result.programId, {
+     glUseProgram(result.programId);
+       result.locations.matrixPerspective = shaderGetUniformLocation(result.programId, "matrixPerspective");
         result.locations.matrixTransform = shaderGetUniformLocation(result.programId, "matrixTransform");
         result.locations.matrixView = shaderGetUniformLocation(result.programId, "matrixView");
-    });
+
+        result.locations.boundsLeft = shaderGetUniformLocation(result.programId, "boundsLeft");
+        result.locations.boundsRight = shaderGetUniformLocation(result.programId, "boundsRight");
+        result.locations.boundsTop = shaderGetUniformLocation(result.programId, "boundsTop");
+        result.locations.boundsBottom = shaderGetUniformLocation(result.programId, "boundsBottom");
+    // });
     return result;
 }
 
@@ -121,4 +132,8 @@ Shader createShaderCursor(){
 
 void shaderSetUniform4m(GLint location, m4 matrix){
     glUniformMatrix4fv(location, 1, GL_TRUE, matrix.m);
+}
+
+void shaderSetUniform32u(GLuint location, u32 value){
+    glUniform1ui(location, value);
 }

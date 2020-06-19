@@ -159,11 +159,19 @@ v3 operator+(v3 left, v3 right){
     return v3(left.x + right.x, left.y + right.y, left.z + right.z);
 }
 
+v2 operator+(v2 left, v2 right){
+    return v2(left.x + right.x, left.y + right.y);
+}
+
 v3 operator-(v3 left, v3 right){
     return v3(left.x - right.x, left.y - right.y, left.z - right.z);
 }
 
 void operator+=(v3& left, v3 right){
+    left = left + right;
+}
+
+void operator+=(v2& left, v2 right){
     left = left + right;
 }
 
