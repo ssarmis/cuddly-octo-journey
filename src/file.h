@@ -1,5 +1,8 @@
 #pragma once
 
+// TODO(Sarmis) this is from other projects of mine
+// for now this might not be usefull, but I'm keeping it here
+
 #include <stdio.h>
 
 #include "general.h"
