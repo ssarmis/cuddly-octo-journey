@@ -9,6 +9,8 @@
 
 #include "gap_buffer.h"
 #include "window.h"
+#include "panel.h"
+#include "panel_actions.h"
 
 #include <time.h>
 
@@ -25,6 +27,7 @@ EditorWindow windows[2] = {
 
 u32 currentWindowIndex = 0;
 EditorWindow* currentWindow = &windows[currentWindowIndex];
+GapBuffer* currentBuffer = &currentWindow->buffer;
 
 int main(int argumentCount, char* arguments[]){
 #if 1
@@ -132,6 +135,15 @@ int main(int argumentCount, char* arguments[]){
         currentWindow->buffer = gapCreateEmpty();
     }
 
+    Panel openFilePanel = panelCreate({0, 0, 0}, {400, FONT_HEIGHT * 3 + 12}, "Open file");
+    openFilePanel.action = openFileAction;
+
+    Panel findPanel = panelCreate({0, 0, 0}, {400, FONT_HEIGHT * 3 + 12}, "Find");
+
+    Panel panel = openFilePanel;
+
+    bool panelActive = false;
+
 #if 1
     bool shiftPressed = false;
 
@@ -181,20 +193,23 @@ int main(int argumentCount, char* arguments[]){
                                     // the already existing offset needs to 
                                     // update
 
-
-                                    // TODO(Sarmis) after the multiple windows
-                                    // were implemented, the resizing 
-                                    // doesn't fix the windows dimensions 
-                                    // properly
                                     for(int i = 0; i < windowCount; ++i){
-                                        r32 wr = windows[i].width / windowWidth;
-                                        r32 hr = windows[i].height / windowHeight;
+                                        r32 wr = (r32)windows[i].width / (r32)windowWidth;
+                                        r32 hr = (r32)windows[i].height / (r32)windowHeight;
 
                                         windows[i].width = wr * newWidth;
                                         windows[i].height = hr * newHeight;
-                                        windows[i].top = hr * newHeight;
 
+                                        windows[i].top = hr * windows[i].top;
                                         windows[i].bottom = windows[i].top + windows[i].height;
+
+                                        windows[i].left = ((r32)windows[i].left / (r32)windowWidth) * newWidth;
+
+                                        windows[i].scrollTop = windows[i].top;
+                                        windows[i].scrollBottom = windows[i].bottom;
+                                        windows[i].buffer.cursor = 0;
+                                        windows[i].scrollY = 0;
+                                        windows[i].scrollX = 0;
                                     }
 
                                     SHADER_SCOPE(shader.programId, {
@@ -296,6 +311,13 @@ int main(int argumentCount, char* arguments[]){
 
                 case SDL_KEYDOWN: {
                         switch (event.key.keysym.scancode) {
+                            case SDL_SCANCODE_ESCAPE: {
+                                    if(panelActive){
+                                        panelActive = false;
+                                    }
+                                }
+                                break;
+
                             case SDL_SCANCODE_LCTRL: case SDL_SCANCODE_RCTRL: {
                                     controlSeeking = true;
                                 }
@@ -309,7 +331,7 @@ int main(int argumentCount, char* arguments[]){
                             case SDL_SCANCODE_PAGEUP: {
                                     if(pageUpReleased){
                                         u32 heightInLines = windowHeight / FONT_HEIGHT;
-                                        gapSeekCursorINewlinesIfPossible(&currentWindow->buffer, -heightInLines);
+                                        gapSeekCursorINewlinesIfPossible(currentBuffer, -heightInLines);
                                     }
                                     pageUpReleased = false;
                                 }
@@ -321,7 +343,7 @@ int main(int argumentCount, char* arguments[]){
                                     // after scroll was done
                                     if(pageDownReleased){
                                         u32 heightInLines = windowHeight / FONT_HEIGHT;
-                                        gapSeekCursorINewlinesIfPossible(&currentWindow->buffer, heightInLines);
+                                        gapSeekCursorINewlinesIfPossible(currentBuffer, heightInLines);
                                     }
                                     pageDownReleased = false;
                                 }
@@ -330,22 +352,22 @@ int main(int argumentCount, char* arguments[]){
                             case SDL_SCANCODE_HOME: {
                                     if(homeReleased){
                                         if(shiftPressed){
-                                            if(!gapGetSelectionSize(&currentWindow->buffer)){
+                                            if(!gapGetSelectionSize(currentBuffer)){
                                                 // there is no current selection alive
-                                                currentWindow->buffer.selection.end = currentWindow->buffer.cursor;
+                                                currentBuffer->selection.end = currentBuffer->cursor;
                                             }
                                         } else {
-                                            currentWindow->buffer.selection.start = currentWindow->buffer.selection.end;
+                                            currentBuffer->selection.start = currentBuffer->selection.end;
                                         }
 
-                                        gapSeekCursorToPreviousNewline(&currentWindow->buffer);
+                                        gapSeekCursorToPreviousNewline(currentBuffer);
 
-                                        if(currentWindow->buffer.data[UserToGap(currentWindow->buffer.gap, currentWindow->buffer.cursor)] == '\n'){
-                                            gapIncreaseCursor(&currentWindow->buffer);
+                                        if(currentBuffer->data[UserToGap(currentBuffer->gap, currentBuffer->cursor)] == '\n'){
+                                            gapIncreaseCursor(currentBuffer);
                                         }
 
                                         if(shiftPressed){
-                                            currentWindow->buffer.selection.start = currentWindow->buffer.cursor;
+                                            currentBuffer->selection.start = currentBuffer->cursor;
                                         }
                                     }
                                     homeReleased = false;
@@ -358,20 +380,20 @@ int main(int argumentCount, char* arguments[]){
                                     // add bound checking
                                     if(endReleased){
                                         if(shiftPressed){
-                                            if(!gapGetSelectionSize(&currentWindow->buffer)){
+                                            if(!gapGetSelectionSize(currentBuffer)){
                                                 // there is no current selection alive
-                                                currentWindow->buffer.selection.start = currentWindow->buffer.cursor;
+                                                currentBuffer->selection.start = currentBuffer->cursor;
                                             }
                                         } else {
-                                            currentWindow->buffer.selection.start = currentWindow->buffer.selection.end;
+                                            currentBuffer->selection.start = currentBuffer->selection.end;
                                         }
 
-                                        if(currentWindow->buffer.data[UserToGap(currentWindow->buffer.gap, currentWindow->buffer.cursor)] != '\n'){
-                                            gapSeekCursorToNewline(&currentWindow->buffer);
+                                        if(currentBuffer->data[UserToGap(currentBuffer->gap, currentBuffer->cursor)] != '\n'){
+                                            gapSeekCursorToNewline(currentBuffer);
                                         }
 
                                         if(shiftPressed){
-                                            currentWindow->buffer.selection.end = currentWindow->buffer.cursor;
+                                            currentBuffer->selection.end = currentBuffer->cursor;
                                         }
                                     }
                                     endReleased = false;
@@ -389,9 +411,12 @@ int main(int argumentCount, char* arguments[]){
                                             ++currentWindowIndex;
                                             currentWindowIndex %= windowCount;
                                             currentWindow = &windows[currentWindowIndex];
+                                            if(!panelActive){
+                                                currentBuffer = &currentWindow->buffer;
+                                            }
                                         } else {
-                                            gapInsertCharacterAt(&currentWindow->buffer, tab, currentWindow->buffer.cursor);
-                                            gapIncreaseCursor(&currentWindow->buffer);
+                                            gapInsertCharacterAt(currentBuffer, tab, currentBuffer->cursor);
+                                            gapIncreaseCursor(currentBuffer);
                                         }
                                     }
                                     tabReleased = false;
@@ -401,14 +426,23 @@ int main(int argumentCount, char* arguments[]){
                             case SDL_SCANCODE_RETURN2: case SDL_SCANCODE_RETURN: {
                                     u8 newline = '\n';
                                     if(newlineReleased){
-                                        i32 tabs = gapGetAmontOfTabsBeforeCursor(&currentWindow->buffer);
+                                        if(panelActive){
+                                            
+                                            panelActive = false;
+                                            panel.action(currentWindow, &panel.buffer);
 
-                                        gapInsertCharacterAt(&currentWindow->buffer, newline, currentWindow->buffer.cursor);
-                                        gapIncreaseCursor(&currentWindow->buffer);
+                                            currentBuffer = &currentWindow->buffer;
 
-                                        while(tabs--){
-                                            gapInsertCharacterAt(&currentWindow->buffer, '\t', currentWindow->buffer.cursor);
-                                            gapIncreaseCursor(&currentWindow->buffer);
+                                        } else {
+                                            i32 tabs = gapGetAmontOfTabsBeforeCursor(currentBuffer);
+
+                                            gapInsertCharacterAt(currentBuffer, newline, currentBuffer->cursor);
+                                            gapIncreaseCursor(currentBuffer);
+
+                                            while(tabs--){
+                                                gapInsertCharacterAt(currentBuffer, '\t', currentBuffer->cursor);
+                                                gapIncreaseCursor(currentBuffer);
+                                            }
                                         }
                                     }
                                     newlineReleased = false;
@@ -420,32 +454,32 @@ int main(int argumentCount, char* arguments[]){
                                     // did this quick to just have a basic thing ready
                                     // for this thing...
                                     if(arrowReleased[1] || arrowTurbo){
-                                        i32 distance = gapGetDistanceFromPreviousNewline(&currentWindow->buffer);
+                                        i32 distance = gapGetDistanceFromPreviousNewline(currentBuffer);
 
                                         if(shiftPressed){
-                                            if(!gapGetSelectionSize(&currentWindow->buffer)){
+                                            if(!gapGetSelectionSize(currentBuffer)){
                                                 // there is no current selection alive
-                                                currentWindow->buffer.selection.end = currentWindow->buffer.cursor;
+                                                currentBuffer->selection.end = currentBuffer->cursor;
                                             }
                                         } else {
-                                            currentWindow->buffer.selection.start = currentWindow->buffer.selection.end;
+                                            currentBuffer->selection.start = currentBuffer->selection.end;
                                         }
 
                                         if(controlSeeking){
-                                            gapSeekCursorINewlinesIfPossible(&currentWindow->buffer, -10);
+                                            gapSeekCursorINewlinesIfPossible(currentBuffer, -10);
                                         } else {
-                                            gapSeekCursorToPreviousNewline(&currentWindow->buffer);
-                                            if(currentWindow->buffer.cursor - 1 >= 0){
-                                                i32 distanceOnPreviousLine = gapGetDistanceFromPreviousNewline(&currentWindow->buffer);
+                                            gapSeekCursorToPreviousNewline(currentBuffer);
+                                            if(currentBuffer->cursor - 1 >= 0){
+                                                i32 distanceOnPreviousLine = gapGetDistanceFromPreviousNewline(currentBuffer);
                                                 distanceOnPreviousLine -= distance;
                                                 if(distanceOnPreviousLine >= 0){
-                                                    gapSeekCursor(&currentWindow->buffer, -distanceOnPreviousLine);
+                                                    gapSeekCursor(currentBuffer, -distanceOnPreviousLine);
                                                 }
                                             }
                                         }
 
                                         if(shiftPressed){
-                                            currentWindow->buffer.selection.start = currentWindow->buffer.cursor;
+                                            currentBuffer->selection.start = currentBuffer->cursor;
                                         }
                                     } else {
                                         arrowTime++;
@@ -459,35 +493,35 @@ int main(int argumentCount, char* arguments[]){
 
                             case SDL_SCANCODE_DOWN: {
                                     if(arrowReleased[0] || arrowTurbo){
-                                        i32 distance = gapGetDistanceFromPreviousNewline(&currentWindow->buffer);
+                                        i32 distance = gapGetDistanceFromPreviousNewline(currentBuffer);
 
                                         if(shiftPressed){
-                                            if(!gapGetSelectionSize(&currentWindow->buffer)){
+                                            if(!gapGetSelectionSize(currentBuffer)){
                                                 // there is no current selection alive
-                                                currentWindow->buffer.selection.start = currentWindow->buffer.cursor;
+                                                currentBuffer->selection.start = currentBuffer->cursor;
                                             }
                                         } else {
-                                            currentWindow->buffer.selection.start = currentWindow->buffer.selection.end;
+                                            currentBuffer->selection.start = currentBuffer->selection.end;
                                         }
 
                                         if(controlSeeking){
-                                            gapSeekCursorINewlinesIfPossible(&currentWindow->buffer, 10);
+                                            gapSeekCursorINewlinesIfPossible(currentBuffer, 10);
                                         } else {
-                                            gapSeekCursorToNewline(&currentWindow->buffer);
+                                            gapSeekCursorToNewline(currentBuffer);
 
-                                            if(currentWindow->buffer.cursor + 1 < currentWindow->buffer.size){
-                                                gapIncreaseCursor(&currentWindow->buffer);
-                                                i32 lineLength = gapGetDistanceToNewline(&currentWindow->buffer);
+                                            if(currentBuffer->cursor + 1 < currentBuffer->size){
+                                                gapIncreaseCursor(currentBuffer);
+                                                i32 lineLength = gapGetDistanceToNewline(currentBuffer);
                                                 if(distance <= lineLength){
-                                                    gapSeekCursor(&currentWindow->buffer, distance - 1);
+                                                    gapSeekCursor(currentBuffer, distance - 1);
                                                 } else {
-                                                    gapSeekCursor(&currentWindow->buffer, lineLength);
+                                                    gapSeekCursor(currentBuffer, lineLength);
                                                 }
                                             }
                                         }
 
                                         if(shiftPressed){
-                                            currentWindow->buffer.selection.end = currentWindow->buffer.cursor;
+                                            currentBuffer->selection.end = currentBuffer->cursor;
                                         }
                                     } else {
                                         arrowTime++;
@@ -502,25 +536,25 @@ int main(int argumentCount, char* arguments[]){
                             case SDL_SCANCODE_LEFT: {
                                     if(arrowReleased[3] || arrowTurbo){
                                         if(shiftPressed){
-                                            if(!gapGetSelectionSize(&currentWindow->buffer)){
+                                            if(!gapGetSelectionSize(currentBuffer)){
                                                 // there is no current selection alive
-                                                currentWindow->buffer.selection.end = currentWindow->buffer.cursor;
+                                                currentBuffer->selection.end = currentBuffer->cursor;
                                             }
                                         } else {
-                                            currentWindow->buffer.selection.start = currentWindow->buffer.selection.end;
+                                            currentBuffer->selection.start = currentBuffer->selection.end;
                                         }
 
                                         if(controlSeeking){
-                                            gapSeekCursorToPreviousCapitalOrSpace(&currentWindow->buffer);
-                                            if(currentWindow->buffer.data[UserToGap(currentWindow->buffer.gap, currentWindow->buffer.cursor)] == '\n'){
-                                                gapIncreaseCursor(&currentWindow->buffer);
+                                            gapSeekCursorToPreviousCapitalOrSpace(currentBuffer);
+                                            if(currentBuffer->data[UserToGap(currentBuffer->gap, currentBuffer->cursor)] == '\n'){
+                                                gapIncreaseCursor(currentBuffer);
                                             }
                                         } else {
-                                            gapDecreaseCursor(&currentWindow->buffer);
+                                            gapDecreaseCursor(currentBuffer);
                                         }
 
                                         if(shiftPressed){
-                                            currentWindow->buffer.selection.start = currentWindow->buffer.cursor;
+                                            currentBuffer->selection.start = currentBuffer->cursor;
                                         }
                                     } else {
                                         arrowTime++;
@@ -535,22 +569,22 @@ int main(int argumentCount, char* arguments[]){
                             case SDL_SCANCODE_RIGHT: {
                                     if(arrowReleased[2] || arrowTurbo){
                                         if(shiftPressed){
-                                            if(!gapGetSelectionSize(&currentWindow->buffer)){
+                                            if(!gapGetSelectionSize(currentBuffer)){
                                                 // there is no current selection alive
-                                                currentWindow->buffer.selection.start = currentWindow->buffer.cursor;
+                                                currentBuffer->selection.start = currentBuffer->cursor;
                                             }
                                         } else {
-                                            currentWindow->buffer.selection.start = currentWindow->buffer.selection.end;
+                                            currentBuffer->selection.start = currentBuffer->selection.end;
                                         }
 
                                         if(controlSeeking){
-                                            gapSeekCursorToCapitalOrSpace(&currentWindow->buffer);
+                                            gapSeekCursorToCapitalOrSpace(currentBuffer);
                                         } else {
-                                            gapIncreaseCursor(&currentWindow->buffer);
+                                            gapIncreaseCursor(currentBuffer);
                                         }
 
                                         if(shiftPressed){
-                                            currentWindow->buffer.selection.end = currentWindow->buffer.cursor;
+                                            currentBuffer->selection.end = currentBuffer->cursor;
                                         }
                                     } else {
                                         arrowTime++;
@@ -564,11 +598,11 @@ int main(int argumentCount, char* arguments[]){
 
                             case SDL_SCANCODE_DELETE: {
                                     if(backspaceReleased || backspaceTurbo){
-                                        if(gapGetSelectionSize(&currentWindow->buffer)){
-                                            gapRemoveCharactersInRange(&currentWindow->buffer, currentWindow->buffer.selection.start, currentWindow->buffer.selection.end);
-                                            gapSeekCursor(&currentWindow->buffer, -(currentWindow->buffer.selection.end - currentWindow->buffer.selection.start));
+                                        if(gapGetSelectionSize(currentBuffer)){
+                                            gapRemoveCharactersInRange(currentBuffer, currentBuffer->selection.start, currentBuffer->selection.end);
+                                            gapSeekCursor(currentBuffer, -(currentBuffer->selection.end - currentBuffer->selection.start));
                                         } else {
-                                            gapRemoveCharacterNearAt(&currentWindow->buffer, currentWindow->buffer.cursor);
+                                            gapRemoveCharacterNearAt(currentBuffer, currentBuffer->cursor);
                                         }
                                     } else {
                                         backspaceTime++;
@@ -584,18 +618,18 @@ int main(int argumentCount, char* arguments[]){
                             case SDL_SCANCODE_BACKSPACE: {
                                     // TODO(Sarmis) this results in segfault, needs bound checking
                                     if(backspaceReleased || backspaceTurbo){
-                                        if(gapGetSelectionSize(&currentWindow->buffer)){
-                                            gapRemoveCharactersInRange(&currentWindow->buffer, currentWindow->buffer.selection.start, currentWindow->buffer.selection.end);
-                                            gapSeekCursor(&currentWindow->buffer, -(currentWindow->buffer.selection.end - currentWindow->buffer.selection.start));
+                                        if(gapGetSelectionSize(currentBuffer)){
+                                            gapRemoveCharactersInRange(currentBuffer, currentBuffer->selection.start, currentBuffer->selection.end);
+                                            gapSeekCursor(currentBuffer, -(currentBuffer->selection.end - currentBuffer->selection.start));
                                         } else {
                                             if(!controlSeeking){
-                                                gapRemoveCharacterAt(&currentWindow->buffer, currentWindow->buffer.cursor);
-                                                gapDecreaseCursor(&currentWindow->buffer);
+                                                gapRemoveCharacterAt(currentBuffer, currentBuffer->cursor);
+                                                gapDecreaseCursor(currentBuffer);
                                             } else {
-                                                u32 end = currentWindow->buffer.cursor;
-                                                gapSeekCursorToPreviousCapitalOrSpace(&currentWindow->buffer);
-                                                u32 start = currentWindow->buffer.cursor + 1;
-                                                gapRemoveCharactersInRange(&currentWindow->buffer, start, end);
+                                                u32 end = currentBuffer->cursor;
+                                                gapSeekCursorToPreviousCapitalOrSpace(currentBuffer);
+                                                u32 start = currentBuffer->cursor + 1;
+                                                gapRemoveCharactersInRange(currentBuffer, start, end);
                                             }
                                         }
                                     } else {
@@ -614,19 +648,41 @@ int main(int argumentCount, char* arguments[]){
                                         character = shiftCharactersLUT[character];
                                     }
                                     if(!controlSeeking){
-                                        gapInsertCharacterAt(&currentWindow->buffer, character, currentWindow->buffer.cursor);
-                                        gapIncreaseCursor(&currentWindow->buffer);
+                                        gapInsertCharacterAt(currentBuffer, character, currentBuffer->cursor);
+                                        gapIncreaseCursor(currentBuffer);
                                     } else {
                                         switch (character) {
-                                            case 's': {
-                                                    if(currentWindow->buffer.dirty){
-                                                    }
+                                            case 'f': {
+                                                    panelActive = true;
+                                                    panel = findPanel;
+                                                    panel.buffer = gapCreateEmpty();
+                                                    panel.position.x = currentWindow->left;
+                                                    panel.position.y = -panel.size.y;
+                                                    currentBuffer = &panel.buffer;
+                                                }
+                                                break;
 
-                                                    if(!currentWindow->buffer.file){
-                                                        // file is not on disk
-                                                        // this is the first save ever
-                                                        // for this file...
-                                                        gapWriteFile(&currentWindow->buffer, "lol.tmp");
+                                            case 'p': {
+                                                    panelActive = true;
+                                                    panel = openFilePanel;
+                                                    panel.buffer = gapCreateEmpty();
+                                                    panel.position.x = currentWindow->left;
+                                                    panel.position.y = -panel.size.y;
+                                                    currentBuffer = &panel.buffer;
+                                                }
+                                                break;
+
+                                            case 's': {
+                                                    if(currentBuffer->dirty){
+                                                        if(!currentBuffer->filename){
+                                                            // file is not on disk
+                                                            // this is the first save ever
+                                                            // for this file...
+                                                            gapWriteFile(currentBuffer, "lol.tmp");
+                                                        } else {
+                                                            gapWriteFile(currentBuffer);
+                                                        }
+                                                        TRACE("Saved file %s\n", currentBuffer->filename);
                                                     }
                                                 }
                                                 break;
@@ -635,8 +691,8 @@ int main(int argumentCount, char* arguments[]){
                                                     if(SDL_HasClipboardText()){
                                                         char* clipboard = SDL_GetClipboardText();
                                                         if(clipboard){
-                                                            i32 distance = gapInsertNullTerminatedStringAt(&currentWindow->buffer, clipboard, currentWindow->buffer.cursor);
-                                                            gapSeekCursor(&currentWindow->buffer, distance);
+                                                            i32 distance = gapInsertNullTerminatedStringAt(currentBuffer, clipboard, currentBuffer->cursor);
+                                                            gapSeekCursor(currentBuffer, distance);
                                                             SDL_free(clipboard);
                                                         }
                                                     }
@@ -647,10 +703,10 @@ int main(int argumentCount, char* arguments[]){
                                                     String copy = {};
                                                     // TODO(Sarmis) solve case in which 
                                                     // the gap in in the selection
-                                                    if(currentWindow->buffer.selection.end < currentWindow->buffer.gap.start){
-                                                        copy = subString(currentWindow->buffer.bufferString, currentWindow->buffer.selection.start, currentWindow->buffer.selection.end);
+                                                    if(currentBuffer->selection.end < currentBuffer->gap.start){
+                                                        copy = subString(currentBuffer->bufferString, currentBuffer->selection.start, currentBuffer->selection.end);
                                                     } else {
-                                                        copy = subString(currentWindow->buffer.bufferString, UserToGap(currentWindow->buffer.gap, currentWindow->buffer.selection.start), UserToGap(currentWindow->buffer.gap, currentWindow->buffer.selection.end));
+                                                        copy = subString(currentBuffer->bufferString, UserToGap(currentBuffer->gap, currentBuffer->selection.start), UserToGap(currentBuffer->gap, currentBuffer->selection.end));
                                                     }
                                                     i32 status = SDL_SetClipboardText((char*)copy.data);
                                                     if(status){
@@ -665,7 +721,7 @@ int main(int argumentCount, char* arguments[]){
                                                 break;
                                         }
                                     }
-                                    currentWindow->buffer.selection.end = currentWindow->buffer.selection.start;
+                                    currentBuffer->selection.end = currentBuffer->selection.start;
                                 }
                                 break;
                         }
@@ -719,14 +775,16 @@ int main(int argumentCount, char* arguments[]){
             }
 
             window->cursor.y += 3;
+            window->transform = translate({window->scrollX, window->scrollY, 0});
+
             if(window->cursor.y <= window->scrollTop){
                 i32 distance = window->scrollTop - window->cursor.y;
-                window->transform *= translate({0, distance, 0});
                 window->scrollBottom -= distance;
                 window->scrollTop -= distance;
+                window->scrollY += distance;
             } else if(window->cursor.y >= window->scrollBottom){
                 i32 distance = window->cursor.y - window->scrollBottom + FONT_HEIGHT;
-                window->transform *= translate({0, -distance, 0});
+                window->scrollY -= distance;
                 window->scrollBottom += distance;
                 window->scrollTop += distance;
             }
@@ -746,9 +804,9 @@ int main(int argumentCount, char* arguments[]){
 
             fontRenderGapBuffer({window->left, window->top}, &window->buffer, &renderBuffer, &renderBufferUI, &font);
 
-            if(i == currentWindowIndex){
+            if(i == currentWindowIndex && !panelActive){
                 if(time < 10){
-                    pushQuad(&renderBufferUI, window->cursor, {FONT_HEIGHT / 2, FONT_HEIGHT + 3}, uvs, v3(0, 1, 1));
+                    pushQuad(&renderBufferUI, window->cursor, {FONT_HEIGHT / 2, FONT_HEIGHT + 3}, uvs, v3(1, 1, 0));
                 }
             }
 
@@ -772,7 +830,76 @@ int main(int argumentCount, char* arguments[]){
                 flushRenderBuffer(GL_TRIANGLES, &renderBufferUI);
             });
         }
+         
+        if(panelActive){
+            panel.position = lerp(panel.position, v3(currentWindow->left, currentWindow->top, 0), 0.3);
+            panel.cursor = {panel.position.x + 12, panel.position.y + 12 + FONT_HEIGHT, 0};
+            for(int i = 0; i < panel.buffer.cursor; ++i){
+                switch(panel.buffer.data[UserToGap(panel.buffer.gap, i)]){
+                    case 0:{
+                        }
+                        break;
 
+                    case '\t': {
+                            panel.cursor.x += FONT_HEIGHT * 2;
+                        }
+                        break;
+
+                    case '\n': {
+                            panel.cursor.y += FONT_HEIGHT;
+                            panel.cursor.x = panel.position.x + 12;
+                        }
+                        break;
+
+                    default: {
+                            Glyph glyph = font.glyphs[panel.buffer.data[UserToGap(panel.buffer.gap, i)] - ' '];
+                            panel.cursor.x += glyph.xadvance;
+                        }
+                        break;
+                }
+            }
+
+            pushQuad(&renderBufferBackground, panel.position, panel.size, uvs, {0.2, 0.2, 0.2});
+
+            if(time < 10){
+                pushQuad(&renderBufferUI, panel.cursor, {FONT_HEIGHT / 2, FONT_HEIGHT + 3}, uvs, v3(1, 1, 0));
+            }
+
+            SHADER_SCOPE(shaderUI.programId, {
+                shaderSetUniform4m(shaderUI.locations.matrixView, m4());
+                shaderSetUniform4m(shaderUI.locations.matrixTransform, m4());
+                shaderSetUniform32u(shaderUI.locations.boundsLeft, 0);
+                shaderSetUniform32u(shaderUI.locations.boundsRight, windowWidth);
+                shaderSetUniform32u(shaderUI.locations.boundsTop, 0);
+                shaderSetUniform32u(shaderUI.locations.boundsBottom, windowHeight);
+                flushRenderBuffer(GL_TRIANGLES, &renderBufferBackground);
+            });
+
+
+            SHADER_SCOPE(shaderUI.programId, {
+                shaderSetUniform4m(shaderUI.locations.matrixView, m4());
+                shaderSetUniform4m(shaderUI.locations.matrixTransform, m4());
+                shaderSetUniform32u(shaderUI.locations.boundsLeft, 0);
+                shaderSetUniform32u(shaderUI.locations.boundsRight, windowWidth);
+                shaderSetUniform32u(shaderUI.locations.boundsTop, 0);
+                shaderSetUniform32u(shaderUI.locations.boundsBottom, windowHeight);
+                flushRenderBuffer(GL_TRIANGLES, &renderBufferUI);
+            });
+
+            fontRenderGapBuffer({panel.position.x + 12, panel.position.y + 12 + FONT_HEIGHT}, &panel.buffer, &renderBuffer, &renderBufferUI, &font);
+            fontRender((u8*)panel.description, strlen(panel.description), {panel.position.x + 12, panel.position.y + FONT_HEIGHT + 12}, &renderBuffer, &font, {0.4, 0.4, 0.4});
+
+            SHADER_SCOPE(shader.programId, {
+                shaderSetUniform4m(shader.locations.matrixView, m4());
+                shaderSetUniform4m(shader.locations.matrixTransform, m4());
+                shaderSetUniform32u(shader.locations.boundsLeft, 0);
+                shaderSetUniform32u(shader.locations.boundsRight, windowWidth);
+                shaderSetUniform32u(shader.locations.boundsTop, 0);
+                shaderSetUniform32u(shader.locations.boundsBottom, windowHeight);
+                flushRenderBuffer(GL_TRIANGLES, &renderBuffer);
+            });
+        }
+        
         SDL_GL_SwapWindow(window);
     }
 #endif

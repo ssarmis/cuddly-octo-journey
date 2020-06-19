@@ -27,7 +27,7 @@ void fontRenderGapBuffer(v2 position, GapBuffer* buffer, RenderBuffer* renderBuf
     v2 cursor = position;
     cursor += v2(0, FONT_HEIGHT);
 
-    v2 selectionCursor = v2(0, 0);
+    v2 selectionCursor = position;
     v3 color = DEFAULT_COLOR_TEXT;
     u32 size = 0;
 
@@ -118,7 +118,8 @@ void fontRenderGapBuffer(v2 position, GapBuffer* buffer, RenderBuffer* renderBuf
     glBindBuffer(GL_ARRAY_BUFFER, 0);
 
     v2 uvs[4] = {};
-
+    
+    // TODO(Sarmis) not proud of this...will change...
     for(int i = 0; i < buffer->size; ++i){
         if(i >= buffer->gap.start && i < buffer->gap.end){
             continue;
@@ -127,7 +128,7 @@ void fontRenderGapBuffer(v2 position, GapBuffer* buffer, RenderBuffer* renderBuf
         char character = buffer->data[i];
         
         if(character == '\n'){
-            selectionCursor.x = 0;
+            selectionCursor.x = position.x;
             selectionCursor.y += FONT_HEIGHT;
         } else if(character == '\t'){
             selectionCursor.x += FONT_HEIGHT * 2;
@@ -143,8 +144,8 @@ void fontRenderGapBuffer(v2 position, GapBuffer* buffer, RenderBuffer* renderBuf
 }
 
 // TODO(Sarmis) this function needs to take a starting position for the cursor
-void fontRender(u8* string, u32 size, RenderBuffer* renderBuffer, FontGL* font){
-    v2 cursor = {};
+void fontRender(u8* string, u32 size, v2 position, RenderBuffer* renderBuffer, FontGL* font, v3 color={1, 1, 1}){
+    v2 cursor = position;
     while(size--){
         char c = *string - ' ';
         Glyph glyph = font->glyphs[c];
@@ -162,21 +163,15 @@ void fontRender(u8* string, u32 size, RenderBuffer* renderBuffer, FontGL* font){
             r32 w = (glyph.x1 - glyph.x0);
             r32 h = (glyph.y1 - glyph.y0);
 
-            r32 yo = 0;
-
-            if(glyph.yoff < 0){
-                yo = h + glyph.yoff;
-            }
-
-            pushQuad(renderBuffer, v3(cursor.x + (glyph.xoff), cursor.y - yo, 0), v2(w, h), uvs);
+            pushQuad(renderBuffer, v3(cursor.x + (glyph.xoff), cursor.y + glyph.yoff, 0), v2(w, h), uvs, color);
             cursor.x += (glyph.xadvance);
         }
         ++string;
     }
 }
 
-void fontRender(String text, RenderBuffer* renderBuffer, FontGL* font){
-    fontRender(text.data, text.size, renderBuffer, font);
+void fontRender(String text, v2 position, RenderBuffer* renderBuffer, FontGL* font){
+    fontRender(text.data, text.size, position, renderBuffer, font);
 }
 
 FontGL createFont(){

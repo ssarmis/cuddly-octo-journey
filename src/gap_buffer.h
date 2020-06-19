@@ -18,7 +18,7 @@ struct Selection {
 
 struct GapBuffer {
     bool dirty;
-    FILE* file;
+    char* filename;
     union{
         String bufferString;
         struct {
@@ -172,6 +172,7 @@ void gapDecreaseCursor(GapBuffer* buffer){
 
 void gapSeekCursor(GapBuffer* buffer, i32 distance){
     buffer->cursor += distance;
+    buffer->cursor = clamp(buffer->cursor, 0, buffer->size - 1);
 }
 
 i32 gapGetDistanceToNewline(GapBuffer* buffer){
@@ -272,7 +273,7 @@ void gapSeekCursorToNewline(GapBuffer* buffer){
     buffer->cursor = clamp(buffer->cursor, 0, buffer->size - 1);
 }
 
-i32 gapSeekGetConsecutiveSpaces(GapBuffer* buffer){
+i32 gapGetConsecutiveSpaces(GapBuffer* buffer){
     i32 clone = buffer->cursor;
 
     ++clone;
@@ -292,9 +293,28 @@ i32 gapSeekGetConsecutiveSpaces(GapBuffer* buffer){
     return (clone - buffer->cursor);
 }
 
+i32 gapGetPreviousConsecutiveSpaces(GapBuffer* buffer){
+    i32 clone = buffer->cursor;
+
+    --clone;
+    i32 convertedCursor = UserToGap(buffer->gap, clone);
+
+    // TODO(Sarmis) since the end of the buffer might me bagic
+    // just let this here for now..
+    while((buffer->data[convertedCursor] == ' '  ||
+          buffer->data[convertedCursor] == '\t') &&
+          buffer->data[convertedCursor] != '\0'){
+        --clone;
+        if(clone < 0){
+            break;
+        }
+        convertedCursor = UserToGap(buffer->gap, clone);
+    }
+    return (buffer->cursor - clone);
+}
+
 void gapSeekCursorToCapitalOrSpace(GapBuffer* buffer){
-    i32 possibleSkip = gapSeekGetConsecutiveSpaces(buffer);
-    printf("%d\n", possibleSkip);
+    i32 possibleSkip = gapGetConsecutiveSpaces(buffer);
     if(possibleSkip > 1){
         buffer->cursor += possibleSkip;
         return;
@@ -338,6 +358,11 @@ void gapSeekCursorToCapitalOrSpace(GapBuffer* buffer){
 }
 
 void gapSeekCursorToPreviousCapitalOrSpace(GapBuffer* buffer){
+    i32 possibleSkip = gapGetPreviousConsecutiveSpaces(buffer);
+    if(possibleSkip > 1){
+        buffer->cursor -= possibleSkip;
+        return;
+    }
     --buffer->cursor;
     i32 convertedCursor = UserToGap(buffer->gap, buffer->cursor);
     // Ok for real I will make a function to see if its a symbol instead
@@ -417,7 +442,7 @@ GapBuffer gapCreateEmpty(){
     GapBuffer result = {};
 
     result.dirty = true;
-    result.file = NULL;
+    result.filename = NULL;
     result.data = new u8[GAP_DEFAULT_SIZE];
     memset(result.data, 0, GAP_DEFAULT_SIZE);
     result.size = GAP_DEFAULT_SIZE;
@@ -437,13 +462,14 @@ GapBuffer gapReadFile(const char* filename){
     
     ASSERT(file);
 
-    result.file = file;
+    result.filename = (char*)filename;
 
     fseek(file, 0, SEEK_END);
     result.size = ftell(file);
     fseek(file, 0, SEEK_SET);
 
     result.data = new u8[result.size + GAP_DEFAULT_SIZE];
+    result.size += GAP_DEFAULT_SIZE;
 
     memset(result.data, 0, result.size + GAP_DEFAULT_SIZE);
 
@@ -451,19 +477,45 @@ GapBuffer gapReadFile(const char* filename){
     result.gap.start = 0;
     result.gap.end = GAP_DEFAULT_SIZE;
 
-    while(fread(result.data + GAP_DEFAULT_SIZE, sizeof(u8), result.size, file)){
+    u32 totalReadbytes = 0;
+    u32 readBytes = 0;
+
+    while(readBytes = fread(result.data + GAP_DEFAULT_SIZE + totalReadbytes, sizeof(u8), result.size, file)){
+        totalReadbytes += readBytes;
     }
 
+    fclose(file);
     return result;
 }
 
 void gapWriteFile(GapBuffer* buffer, const char* filename){
     FILE* file = fopen(filename, "wb");
     
+    buffer->filename = (char*)filename;
     buffer->dirty = false;
-    buffer->file = file;
 
     fwrite(buffer->data, sizeof(u8), buffer->gap.start, file);
     fwrite(buffer->data + buffer->gap.end, sizeof(u8), buffer->size - buffer->gap.end, file);
     fclose(file);
+}
+
+void gapWriteFile(GapBuffer* buffer){
+    gapWriteFile(buffer, buffer->filename);
+}
+
+char* gapToString(GapBuffer* buffer){
+    char* result = new char[buffer->size + 1];
+    u32 offset = 0;
+    for(int i = 0; i < buffer->size; ++i){
+        if(i >= buffer->gap.start && i < buffer->gap.end){
+            continue;
+        } else if (!buffer->data[i]){
+            continue;
+        }
+
+        result[offset++] = buffer->data[i];
+    }
+
+    result[offset] = 0;
+    return result;
 }

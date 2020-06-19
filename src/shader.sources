@@ -137,7 +137,7 @@ void main(){
     if(gl_FragCoord.x >= boundsLeft && gl_FragCoord.x <= boundsRight &&
        gl_FragCoord.y >= boundsTop && gl_FragCoord.y <= boundsBottom){
         outputColor = v4(vertexColorOut, 1);
-        outputColor.w = 0.5;
+        outputColor.w = 0.8;
     } else {
         discard;
     }

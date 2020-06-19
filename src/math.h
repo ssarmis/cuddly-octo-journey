@@ -151,6 +151,18 @@ void operator*=(m4& left, m4 right){
     left = left*right;
 }
 
+v3 operator*(v3 left, r32 right){
+    v3 result = {};
+    result.x = left.x * right;
+    result.y = left.y * right;
+    result.z = left.z * right;
+    return result;
+}
+
+v3 operator*(r32 left, v3 right){
+    return right * left;
+}
+
 v3 operator-(v3& vector){
     return v3(-vector.x, -vector.y, -vector.z);
 }
@@ -448,4 +460,10 @@ i32 clamp(i32 value, i32 min, i32 max){
     result.m[15] = 0;
 
 #endif
+
+v3 lerp(v3 start, v3 end, r32 time){
+    return (start + (end - start) * time);
+}
+
+
 

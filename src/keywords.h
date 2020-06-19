@@ -57,7 +57,7 @@ Keyword KEYWORDS[] = {
 };
 
 void keywordPeek(u8* data, v3* color, u32* size){
-    // NOTE(Sarmis) yes, this has no bounds check
+// NOTE(Sarmis) yes, this has no bounds check
     // this could end up in a segmentation fault
     // good for me I am only reading and not also 
     // writing :D
