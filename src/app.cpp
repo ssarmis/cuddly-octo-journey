@@ -8,8 +8,6 @@
 #include "font.h"
 
 #include "gap_buffer.h"
-#include "linked_lines.h"
-#include "selection.h"
 #include "window.h"
 
 #include <time.h>

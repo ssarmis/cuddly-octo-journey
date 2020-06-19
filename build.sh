@@ -1,1 +1,1 @@
-g++ -o app infernoGl/gl.cpp src/app.cpp -g -IinfernoGl -lSDL2main -lSDL2 -lGL -lpthread -DDEBUG_BUILD -std=c++11 -Wno-format
+g++ -o app infernoGl/gl.cpp src/app.cpp -g -IinfernoGl -lSDL2main -lSDL2 -lGL -lpthread -DDEBUG_BUILD -std=c++11 -Wno-format -Wno-write-strings -Wno-narrowing

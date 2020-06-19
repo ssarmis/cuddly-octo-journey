@@ -46,6 +46,8 @@ void fontRenderGapBuffer(v2 position, GapBuffer* buffer, RenderBuffer* renderBuf
         char character = buffer->data[i];
 
         if(!size){
+            // NOTE(Sarmis) if you ever though you wrote bad code
+            // you never saw this approach/function here
             keywordPeek(&buffer->data[i], &color, &size);
         }
 
@@ -140,6 +142,7 @@ void fontRenderGapBuffer(v2 position, GapBuffer* buffer, RenderBuffer* renderBuf
     }
 }
 
+// TODO(Sarmis) this function needs to take a starting position for the cursor
 void fontRender(u8* string, u32 size, RenderBuffer* renderBuffer, FontGL* font){
     v2 cursor = {};
     while(size--){
