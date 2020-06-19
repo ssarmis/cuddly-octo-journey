@@ -180,6 +180,12 @@ int main(int argumentCount, char* arguments[]){
                                     // depending on the new size,
                                     // the already existing offset needs to 
                                     // update
+
+
+                                    // TODO(Sarmis) after the multiple windows
+                                    // were implemented, the resizing 
+                                    // doesn't fix the windows dimensions 
+                                    // properly
                                     for(int i = 0; i < windowCount; ++i){
                                         r32 wr = windows[i].width / windowWidth;
                                         r32 hr = windows[i].height / windowHeight;
@@ -347,6 +353,9 @@ int main(int argumentCount, char* arguments[]){
                                 break;
 
                             case SDL_SCANCODE_END: {
+                                    // TODO(Sarmis) this could end at a weird 
+                                    // location at the end of the buffer
+                                    // add bound checking
                                     if(endReleased){
                                         if(shiftPressed){
                                             if(!gapGetSelectionSize(&currentWindow->buffer)){
@@ -407,6 +416,9 @@ int main(int argumentCount, char* arguments[]){
                                 break;
 
                             case SDL_SCANCODE_UP: {
+                                    // TODO(Sarmis) this doesn't really work properly
+                                    // did this quick to just have a basic thing ready
+                                    // for this thing...
                                     if(arrowReleased[1] || arrowTurbo){
                                         i32 distance = gapGetDistanceFromPreviousNewline(&currentWindow->buffer);
 
@@ -570,6 +582,7 @@ int main(int argumentCount, char* arguments[]){
 
 
                             case SDL_SCANCODE_BACKSPACE: {
+                                    // TODO(Sarmis) this results in segfault, needs bound checking
                                     if(backspaceReleased || backspaceTurbo){
                                         if(gapGetSelectionSize(&currentWindow->buffer)){
                                             gapRemoveCharactersInRange(&currentWindow->buffer, currentWindow->buffer.selection.start, currentWindow->buffer.selection.end);
