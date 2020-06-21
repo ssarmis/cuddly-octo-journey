@@ -10,7 +10,7 @@ struct Panel {
     v3 cursor;
     char* description;
     GapBuffer buffer;
-    void (*action)(void*, void*);
+    void (*action)(void* data0, void* data1, bool* done);
 };
 
 Panel panelCreate(v3 position, v2 size, char* description){

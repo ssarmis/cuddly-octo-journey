@@ -138,12 +138,22 @@ void fontRenderGapBuffer(v2 position, GapBuffer* buffer, RenderBuffer* renderBuf
         } else if(character == '\t'){
             selectionCursor.x += FONT_HEIGHT * 2;
         } else {
+            if(selectionCursor.y < upperLine){
+                continue;
+            } else if(selectionCursor.y > bottomLine){
+                break;
+            }
+
             if(i >= UserToGap(buffer->gap, buffer->selection.start) &&
-                i < UserToGap(buffer->gap, buffer->selection.end)){
+               i < UserToGap(buffer->gap, buffer->selection.end)){
                 pushQuad(renderBufferUI, v3(selectionCursor.x, selectionCursor.y + 3, 0), 
                         v2(FONT_HEIGHT / 2, FONT_HEIGHT + 3), uvs, SELECTION_COLOR_TEXT);
             }
-            selectionCursor.x += FONT_HEIGHT / 2;
+
+            i32 glyphIndex = character - ' ';
+            Glyph glyph = font->glyphs[glyphIndex];
+
+            selectionCursor.x += (glyph.xadvance);
         }
     }
 }

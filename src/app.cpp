@@ -1,4 +1,3 @@
-#include <SDL2/SDL.h>
 
 #include "gl.h"
 #include "gl_utilities.h"
@@ -8,7 +7,8 @@
 #include "font.h"
 
 #include "gap_buffer.h"
-#include "window.h"
+#include "editor_window.h"
+#include "window_sdl.h"
 #include "panel.h"
 #include "panel_actions.h"
 
@@ -21,8 +21,8 @@ u32 windowHeight = 768;
 
 u32 windowCount = 2;
 EditorWindow windows[2] = {
-    windowCreate(windowWidth / 2, windowHeight, 0, 0),
-    windowCreate(windowWidth / 2, windowHeight, windowWidth / 2, 0)
+    editorWindowCreate(windowWidth / 2, windowHeight, 0, 0),
+    exitorWindowCreate(windowWidth / 2, windowHeight, windowWidth / 2, 0)
 };
 
 u32 currentWindowIndex = 0;
@@ -36,21 +36,7 @@ int main(int argumentCount, char* arguments[]){
         return 1;
     }
 
-    SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 4);
-    SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 3);
-    SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_CORE);
-
-    SDL_GL_SetAttribute(SDL_GL_RED_SIZE, 5);
-    SDL_GL_SetAttribute(SDL_GL_GREEN_SIZE, 5);
-    SDL_GL_SetAttribute(SDL_GL_BLUE_SIZE, 5);
-    SDL_GL_SetAttribute(SDL_GL_DEPTH_SIZE, 16);
-    SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, 1);
-
-    SDL_Window *window = SDL_CreateWindow("App",
-                                          SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED,
-                                          windowWidth, windowHeight,
-                                          SDL_WINDOW_OPENGL | SDL_WINDOW_RESIZABLE);
-    SDL_GLContext glcontext = SDL_GL_CreateContext(window);
+    WindowSDL window windowCreate(windowWidth, windowHeight, "App");
 
     initializeGL();
 
@@ -59,32 +45,10 @@ int main(int argumentCount, char* arguments[]){
     SDL_Event event;
 
     RenderBuffer renderBuffer = createVertexArrayObject();
-    // preprocess indices
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, renderBuffer.indexBufferId);
-    Index* indices = NULL;
-
-    indices = (Index*)glMapBuffer(GL_ELEMENT_ARRAY_BUFFER, GL_WRITE_ONLY);
-
-    Index* clone = indices;
-    Index offset = 0;
-    for(int i = 0; i < renderBuffer.indexBufferSize / 32; ++i){
-        *indices++ = offset + 0;
-        *indices++ = offset + 1;
-        *indices++ = offset + 2;
-
-        *indices++ = offset + 1;
-        *indices++ = offset + 3;
-        *indices++ = offset + 2;
-        
-        offset += 4;
-    }
-
-    glUnmapBuffer(GL_ELEMENT_ARRAY_BUFFER);
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
-    //
-
     RenderBuffer renderBufferBackground = createVertexArrayObject();
     RenderBuffer renderBufferUI = createVertexArrayObject();
+
+    pushPreProcessedQuadIndicesToRenderBuffer(&renderBuffer);
 
     FontGL font = createFont();
     
@@ -132,20 +96,24 @@ int main(int argumentCount, char* arguments[]){
     if(argumentCount > 1){
         currentWindow->buffer = gapReadFile(arguments[1]);
     } else {
-        currentWindow->buffer = gapCreateEmpty();
+        currentWindow->buffer = gapReadFile("todo");
     }
 
     Panel openFilePanel = panelCreate({0, 0, 0}, {400, FONT_HEIGHT * 3 + 12 + 4}, "Open file");
     openFilePanel.action = openFileAction;
 
     Panel findPanel = panelCreate({0, 0, 0}, {400, FONT_HEIGHT * 3 + 12 + 4}, "Find");
-
+ 
     Panel gotoLinePanel = panelCreate({0, 0, 0}, {400, FONT_HEIGHT * 3 + 12 + 4}, "Goto line");
     gotoLinePanel.action = gotoLineAction;
+
+    Panel saveNewFile = panelCreate({0, 0, 0}, {400, FONT_HEIGHT * 3 + 12 + 4}, "Save file");
+    saveNewFile.action = saveFileAction;
 
     Panel panel = openFilePanel;
 
     bool panelActive = false;
+    i16 panelShakeTime = 0;
 
 #if 1
     bool shiftPressed = false;
@@ -431,11 +399,14 @@ int main(int argumentCount, char* arguments[]){
                                     if(newlineReleased){
                                         if(panelActive){
                                             
-                                            panelActive = false;
-                                            panel.action(currentWindow, &panel.buffer);
-
-                                            currentBuffer = &currentWindow->buffer;
-
+                                            bool done = false;
+                                            panel.action(currentWindow, &panel.buffer, &done);
+                                            if(done){
+                                                panelActive = false;
+                                                currentBuffer = &currentWindow->buffer;
+                                            } else {
+                                                panelShakeTime = 10;
+                                            }
                                         } else {
                                             i32 tabs = gapGetAmontOfTabsBeforeCursor(currentBuffer);
 
@@ -605,7 +576,15 @@ int main(int argumentCount, char* arguments[]){
                                             gapRemoveCharactersInRange(currentBuffer, currentBuffer->selection.start, currentBuffer->selection.end);
                                             gapSeekCursor(currentBuffer, -(currentBuffer->selection.end - currentBuffer->selection.start));
                                         } else {
-                                            gapRemoveCharacterNearAt(currentBuffer, currentBuffer->cursor);
+                                            if(!controlSeeking){
+                                                gapRemoveCharacterNearAt(currentBuffer, currentBuffer->cursor);
+                                            } else {
+                                                u32 start = currentBuffer->cursor;
+                                                gapSeekCursorToCapitalOrSpace(currentBuffer);
+                                                u32 end = currentBuffer->cursor + 1;
+                                                gapRemoveCharactersInRange(currentBuffer, start, end);
+                                                currentBuffer->cursor = start;
+                                            }
                                         }
                                     } else {
                                         backspaceTime++;
@@ -632,7 +611,9 @@ int main(int argumentCount, char* arguments[]){
                                                 u32 end = currentBuffer->cursor;
                                                 gapSeekCursorToPreviousCapitalOrSpace(currentBuffer);
                                                 u32 start = currentBuffer->cursor + 1;
-                                                gapRemoveCharactersInRange(currentBuffer, start, end);
+                                                if(start < end){
+                                                    gapRemoveCharactersInRange(currentBuffer, start, end);
+                                                }
                                             }
                                         }
                                     } else {
@@ -684,17 +665,35 @@ int main(int argumentCount, char* arguments[]){
                                                 }
                                                 break;
 
+                                            case 'n': {
+                                                    gapClean(&currentWindow->buffer);
+                                                    currentWindow->buffer = gapCreateEmpty();
+                                                    currentWindow->transform = m4();
+                                                    currentWindow->view = m4();
+
+                                                    currentWindow->scrollX = 0;
+                                                    currentWindow->scrollY = 0;
+
+                                                    currentWindow->scrollTop = currentWindow->top;
+                                                    currentWindow->scrollBottom = currentWindow->bottom;
+                                                    currentBuffer = &currentWindow->buffer;
+                                                }
+                                                break;
+
                                             case 's': {
                                                     if(currentBuffer->dirty){
                                                         if(!currentBuffer->filename){
-                                                            // file is not on disk
-                                                            // this is the first save ever
-                                                            // for this file...
-                                                            gapWriteFile(currentBuffer, "lol.tmp");
+                                                            panelActive = true;
+                                                            panel = saveNewFile;
+                                                            panel.buffer = gapCreateEmpty();
+                                                            panel.position.x = currentWindow->left;
+                                                            panel.position.y = -panel.size.y;
+                                                            currentBuffer = &panel.buffer;
                                                         } else {
                                                             gapWriteFile(currentBuffer);
+                                                            currentWindow->background = SAVE_COLOR_BACKGROUND;
+                                                            TRACE("Saved file %s\n", currentBuffer->filename);
                                                         }
-                                                        TRACE("Saved file %s\n", currentBuffer->filename);
                                                     }
                                                 }
                                                 break;
@@ -733,7 +732,7 @@ int main(int argumentCount, char* arguments[]){
                                                 break;
                                         }
                                     }
-                                    currentBuffer->selection.end = currentBuffer->selection.start;
+                                    // currentBuffer->selection.end = currentBuffer->selection.start;
                                 }
                                 break;
                         }
@@ -802,6 +801,9 @@ int main(int argumentCount, char* arguments[]){
             }
 
             // current editing line
+            window->background = lerp(window->background, DEFAULT_COLOR_BACKGROUND, 0.1);
+            pushQuad(&renderBufferBackground, {currentWindow->left, currentWindow->scrollTop, 0}, {currentWindow->width, currentWindow->height}, uvs, window->background);
+
             pushQuad(&renderBufferBackground, v3(window->left, window->cursor.y, 0), {window->width, FONT_HEIGHT + 3}, uvs, v3(0, 0, 0));
 
             SHADER_SCOPE(shaderUI.programId, {
@@ -814,7 +816,9 @@ int main(int argumentCount, char* arguments[]){
                 flushRenderBuffer(GL_TRIANGLES, &renderBufferBackground);
             });
 
-            fontRenderGapBuffer({window->left, window->top}, &window->buffer, &renderBuffer, &renderBufferUI, &font, window->scrollTop, window->scrollBottom);
+            fontRenderGapBuffer({window->left, window->top}, &window->buffer, &renderBuffer,
+                                 &renderBufferUI, &font, 
+                                 window->scrollTop - FONT_HEIGHT * 20, window->scrollBottom + FONT_HEIGHT * 20);
 
             if(i == currentWindowIndex && !panelActive){
                 if(time < 10){
@@ -846,6 +850,12 @@ int main(int argumentCount, char* arguments[]){
         if(panelActive){
             panel.position = lerp(panel.position, v3(currentWindow->left, currentWindow->top, 0), 0.3);
             panel.cursor = {panel.position.x + 12, panel.position.y + 12 + FONT_HEIGHT + 4, 0};
+
+            if(panelShakeTime > 0){
+                --panelShakeTime;
+                panel.position += v3(sin(time)*2, 0, 0);
+            }
+
             for(int i = 0; i < panel.buffer.cursor; ++i){
                 switch(panel.buffer.data[UserToGap(panel.buffer.gap, i)]){
                     case 0:{

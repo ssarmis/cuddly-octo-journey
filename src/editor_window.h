@@ -21,11 +21,12 @@ struct EditorWindow {
     m4 view;
 
     v3 cursor;
+    v3 background;
 
     GapBuffer buffer;
 };
 
-EditorWindow windowCreate(i32 width, i32 height, u32 left, u32 top){
+EditorWindow editorWindowCreate(i32 width, i32 height, u32 left, u32 top){
     EditorWindow result = {};
 
     result.width = width;
@@ -47,6 +48,7 @@ EditorWindow windowCreate(i32 width, i32 height, u32 left, u32 top){
     result.scrollBottom = result.bottom;
 
     result.buffer = gapCreateEmpty();
+    result.background = DEFAULT_COLOR_BACKGROUND;
 
     return result;
 }

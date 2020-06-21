@@ -1,6 +1,6 @@
 #pragma once
 #include <stdint.h>
-
+ 
 #ifdef DEBUG_BUILD
 #include <stdio.h>
 #include <assert.h>
@@ -219,7 +219,7 @@ static inline void bufferAppend(Buffer<T>* buffer, Buffer<T>* addition){
             delete[] clone;
         }
     }
-
+  
     if(!addition){
         TRACE("Cannot copy from a NULL buffer\n");
         ASSERT(false);

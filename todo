@@ -1,0 +1,5 @@
+- cache previous rendered text, and only update it if needed
+- fix up/down movements in text
+- implement marking as selecting
+- implement moving lines with ALT+UP/DOWN
+- fix crash on opening infernoGl/gl.cpp

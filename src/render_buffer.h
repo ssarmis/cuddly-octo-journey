@@ -6,8 +6,8 @@
 #include "vertex.h"
 
 
-#define VERTEX_BUFFER_SIZE MB(10)
-#define INDEX_BUFFER_SIZE MB(10)
+#define VERTEX_BUFFER_SIZE MB(1)
+#define INDEX_BUFFER_SIZE MB(1)
 
 struct RenderBuffer {
     GLuint vertexArrayId;
@@ -41,6 +41,30 @@ RenderBuffer createVertexArrayObject(u32 vertexBufferSize=VERTEX_BUFFER_SIZE, u3
     });
 
     return result;
+}
+
+void pushPreProcessedQuadIndicesToRenderBuffer(RenderBuffer* buffer){
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, buffer->indexBufferId);
+    Index* indices = NULL;
+
+    indices = (Index*)glMapBuffer(GL_ELEMENT_ARRAY_BUFFER, GL_WRITE_ONLY);
+
+    Index* clone = indices;
+    Index offset = 0;
+    for(int i = 0; i < buffer->indexBufferSize / (6 * sizeof(Index)); ++i){
+        *indices++ = offset + 0;
+        *indices++ = offset + 1;
+        *indices++ = offset + 2;
+
+        *indices++ = offset + 1;
+        *indices++ = offset + 3;
+        *indices++ = offset + 2;
+        
+        offset += 4;
+    }
+
+    glUnmapBuffer(GL_ELEMENT_ARRAY_BUFFER);
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
 }
 
 void pushVerteciesToRenderBuffer(RenderBuffer* buffer, Vertex* vertecies, u32 amount){
@@ -125,4 +149,9 @@ void flushRenderBuffer(GLenum mode, RenderBuffer* renderBuffer){
     renderBuffer->totalUsedVertices = 0;
     // TODO(Sarmis) well since this is a flush function we might want to reset everything
 }
- 
+
+void displayRenderBuffer(GLenum mode, RenderBuffer* renderBuffer){
+    VERTEX_ARRAY_BUFFER_SCOPE(renderBuffer->vertexArrayId, {
+        glDrawElements(mode, renderBuffer->totalUsedIndices, GL_UNSIGNED_INT, 0);
+    });
+}

@@ -30,6 +30,7 @@ struct GapBuffer {
     Gap gap;
     Selection selection;
 };
+
 i32 gapGetGapSize(GapBuffer* buffer){
     return (buffer->gap.end - buffer->gap.start);
 }
@@ -125,10 +126,12 @@ void gapShrinkGap(GapBuffer* buffer){
 
 void gapExtendGap(GapBuffer* buffer){
     --buffer->gap.start;
+    buffer->gap.start = clamp(buffer->gap.start, 0, buffer->size - 1);
 }
 
 void gapExtendGapBackwards(GapBuffer* buffer){
     ++buffer->gap.end;
+    buffer->gap.end = clamp(buffer->gap.end, 0, buffer->size - 1);
 }
 
 void gapInsertCharacterAt(GapBuffer* buffer, char character, u32 position){
@@ -225,7 +228,8 @@ void gapSeekCursorToPreviousNewline(GapBuffer* buffer){
     --buffer->cursor;
     i32 convertedCursor = UserToGap(buffer->gap, buffer->cursor);
 
-    while(buffer->data[convertedCursor] != '\n'){
+    while(buffer->data[convertedCursor] != '\n' &&
+          buffer->data[convertedCursor] != '\r'){
         --buffer->cursor;
         if(buffer->cursor <= 0){
             break;
@@ -263,6 +267,7 @@ void gapSeekCursorToNewline(GapBuffer* buffer){
     // TODO(Sarmis) since the end of the buffer might me bagic
     // just let this here for now..
     while(buffer->data[convertedCursor] != '\n' &&
+          buffer->data[convertedCursor] != '\r' &&
           buffer->data[convertedCursor] != '\0'){
         ++buffer->cursor;
         if(buffer->cursor == buffer->size - 1){
@@ -334,6 +339,7 @@ void gapSeekCursorToCapitalOrSpace(GapBuffer* buffer){
     i32 possibleSkip = gapGetConsecutiveSpaces(buffer);
     if(possibleSkip > 1){
         buffer->cursor += possibleSkip;
+        buffer->cursor = clamp(buffer->cursor, 0, buffer->size - 1);
         return;
     }
     ++buffer->cursor;
@@ -378,6 +384,7 @@ void gapSeekCursorToPreviousCapitalOrSpace(GapBuffer* buffer){
     i32 possibleSkip = gapGetPreviousConsecutiveSpaces(buffer);
     if(possibleSkip > 1){
         buffer->cursor -= possibleSkip;
+        buffer->cursor = clamp(buffer->cursor, 0, buffer->size - 1);
         return;
     }
     --buffer->cursor;
@@ -477,7 +484,9 @@ GapBuffer gapReadFile(const char* filename){
 
     FILE* file = fopen(filename, "rb");
     
-    ASSERT(file);
+    if(!file){
+        return result;
+    }
 
     result.filename = (char*)filename;
 
@@ -505,19 +514,25 @@ GapBuffer gapReadFile(const char* filename){
     return result;
 }
 
-void gapWriteFile(GapBuffer* buffer, const char* filename){
+bool gapWriteFile(GapBuffer* buffer, const char* filename){
     FILE* file = fopen(filename, "wb");
     
+    if(!file){
+        return false;
+    }
+
     buffer->filename = (char*)filename;
     buffer->dirty = false;
 
     fwrite(buffer->data, sizeof(u8), buffer->gap.start, file);
     fwrite(buffer->data + buffer->gap.end, sizeof(u8), buffer->size - buffer->gap.end, file);
     fclose(file);
+
+    return true;
 }
 
-void gapWriteFile(GapBuffer* buffer){
-    gapWriteFile(buffer, buffer->filename);
+bool gapWriteFile(GapBuffer* buffer){
+    return gapWriteFile(buffer, buffer->filename);
 }
 
 char* gapToString(GapBuffer* buffer){
@@ -535,4 +550,18 @@ char* gapToString(GapBuffer* buffer){
 
     result[offset] = 0;
     return result;
+}
+
+void gapClean(GapBuffer* buffer){
+    if(buffer->data){
+        delete[] buffer->data;
+    }
+
+    buffer->data = NULL;
+    buffer->cursor = 0;
+    buffer->size = 0;
+    buffer->gap = {};
+    buffer->selection = {};
+    buffer->dirty = false;
+    buffer->filename = NULL;
 }
