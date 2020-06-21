@@ -131,7 +131,9 @@ void fontRenderGapBuffer(v2 position, GapBuffer* buffer, RenderBuffer* renderBuf
         }
 
         char character = buffer->data[i];
-        
+        i32 glyphIndex = character - ' ';
+        Glyph glyph = font->glyphs[glyphIndex];
+       
         if(character == '\n'){
             selectionCursor.x = position.x;
             selectionCursor.y += FONT_HEIGHT;
@@ -143,7 +145,8 @@ void fontRenderGapBuffer(v2 position, GapBuffer* buffer, RenderBuffer* renderBuf
                 pushQuad(renderBufferUI, v3(selectionCursor.x, selectionCursor.y + 3, 0), 
                         v2(FONT_HEIGHT / 2, FONT_HEIGHT + 3), uvs, SELECTION_COLOR_TEXT);
             }
-            selectionCursor.x += FONT_HEIGHT / 2;
+
+            selectionCursor.x += (glyph.xadvance);
         }
     }
 }

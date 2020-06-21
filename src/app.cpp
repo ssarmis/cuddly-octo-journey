@@ -59,29 +59,7 @@ int main(int argumentCount, char* arguments[]){
     SDL_Event event;
 
     RenderBuffer renderBuffer = createVertexArrayObject();
-    // preprocess indices
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, renderBuffer.indexBufferId);
-    Index* indices = NULL;
-
-    indices = (Index*)glMapBuffer(GL_ELEMENT_ARRAY_BUFFER, GL_WRITE_ONLY);
-
-    Index* clone = indices;
-    Index offset = 0;
-    for(int i = 0; i < renderBuffer.indexBufferSize / 32; ++i){
-        *indices++ = offset + 0;
-        *indices++ = offset + 1;
-        *indices++ = offset + 2;
-
-        *indices++ = offset + 1;
-        *indices++ = offset + 3;
-        *indices++ = offset + 2;
-        
-        offset += 4;
-    }
-
-    glUnmapBuffer(GL_ELEMENT_ARRAY_BUFFER);
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
-    //
+    pushPreProcesedQuadsIndices(&renderBuffer);
 
     RenderBuffer renderBufferBackground = createVertexArrayObject();
     RenderBuffer renderBufferUI = createVertexArrayObject();
@@ -141,7 +119,9 @@ int main(int argumentCount, char* arguments[]){
     Panel findPanel = panelCreate({0, 0, 0}, {400, FONT_HEIGHT * 3 + 12 + 4}, "Find");
 
     Panel gotoLinePanel = panelCreate({0, 0, 0}, {400, FONT_HEIGHT * 3 + 12 + 4}, "Goto line");
-    gotoLinePanel.action = gotoLineAction;
+
+    Panel saveFilePanel = panelCreate({0, 0, 0}, {400, FONT_HEIGHT * 3 + 12 + 4}, "Save file");
+    saveFilePanel.action = saveFileAction;
 
     Panel panel = openFilePanel;
 
@@ -690,11 +670,18 @@ int main(int argumentCount, char* arguments[]){
                                                             // file is not on disk
                                                             // this is the first save ever
                                                             // for this file...
-                                                            gapWriteFile(currentBuffer, "lol.tmp");
+                                                            panelActive = true;
+                                                            panel = saveFilePanel;
+                                                            panel.buffer = gapCreateEmpty();
+                                                            panel.position.x = currentWindow->left;
+                                                            panel.position.y = -panel.size.y;
+                                                            currentBuffer = &panel.buffer;
+                                                            // clear previous panel gap buffer is curenly opened
                                                         } else {
                                                             gapWriteFile(currentBuffer);
+                                                            currentWindow->backgroundColor = {0, 0.1, 0};
+                                                            TRACE("Saved file %s\n", currentBuffer->filename);
                                                         }
-                                                        TRACE("Saved file %s\n", currentBuffer->filename);
                                                     }
                                                 }
                                                 break;
@@ -758,158 +745,24 @@ int main(int argumentCount, char* arguments[]){
         glActiveTexture(GL_TEXTURE0);
         glBindTexture(GL_TEXTURE_2D, font.textureId);
         
+        currentWindow->backgroundColor = lerp(currentWindow->backgroundColor, DEFAULT_COLOR_BACKGROUND, 0.1);
+        pushQuad(&renderBufferBackground, {currentWindow->left, currentWindow->top, 0},
+                {currentWindow->width, currentWindow->height}, uvs, currentWindow->backgroundColor);
+
         for(int i = 0; i < windowCount; ++i){
-            EditorWindow* window = &windows[i];
-            window->cursor = v3(window->left, window->top, 0);
-            for(int ii = 0; ii < window->buffer.cursor; ++ii){
-                switch(window->buffer.data[UserToGap(window->buffer.gap, ii)]){
-                    case 0:{
-                        }
-                        break;
-
-                    case '\t': {
-                            window->cursor.x += FONT_HEIGHT * 2;
-                        }
-                        break;
-
-                    case '\n': {
-                            window->cursor.y += FONT_HEIGHT;
-                            window->cursor.x = window->left;
-                        }
-                        break;
-
-                    default: {
-                            Glyph glyph = font.glyphs[window->buffer.data[UserToGap(window->buffer.gap, ii)] - ' '];
-                            window->cursor.x += glyph.xadvance;
-                        }
-                        break;
-                }
-            }
-
-            window->cursor.y += 3;
-            window->transform = translate({window->scrollX, window->scrollY, 0});
-
-            if(window->cursor.y <= window->scrollTop){
-                i32 distance = window->scrollTop - window->cursor.y;
-                window->scrollBottom -= distance;
-                window->scrollTop -= distance;
-                window->scrollY += distance;
-            } else if(window->cursor.y >= window->scrollBottom){
-                i32 distance = window->cursor.y - window->scrollBottom + FONT_HEIGHT;
-                window->scrollY -= distance;
-                window->scrollBottom += distance;
-                window->scrollTop += distance;
-            }
-
-            // current editing line
-            pushQuad(&renderBufferBackground, v3(window->left, window->cursor.y, 0), {window->width, FONT_HEIGHT + 3}, uvs, v3(0, 0, 0));
-
-            SHADER_SCOPE(shaderUI.programId, {
-                shaderSetUniform4m(shaderUI.locations.matrixView, window->view);
-                shaderSetUniform4m(shaderUI.locations.matrixTransform, window->transform);
-                shaderSetUniform32u(shaderUI.locations.boundsLeft, window->left);
-                shaderSetUniform32u(shaderUI.locations.boundsRight, window->left + window->width);
-                shaderSetUniform32u(shaderUI.locations.boundsTop, window->top);
-                shaderSetUniform32u(shaderUI.locations.boundsBottom, window->top + window->height);
-                flushRenderBuffer(GL_TRIANGLES, &renderBufferBackground);
-            });
-
-            fontRenderGapBuffer({window->left, window->top}, &window->buffer, &renderBuffer, &renderBufferUI, &font, window->scrollTop, window->scrollBottom);
-
-            if(i == currentWindowIndex && !panelActive){
-                if(time < 10){
-                    pushQuad(&renderBufferUI, window->cursor, {FONT_HEIGHT / 2, FONT_HEIGHT + 3}, uvs, v3(1, 1, 0));
-                }
-            }
-
-            SHADER_SCOPE(shader.programId, {
-                shaderSetUniform4m(shader.locations.matrixView, window->view);
-                shaderSetUniform4m(shader.locations.matrixTransform, window->transform);
-                shaderSetUniform32u(shader.locations.boundsLeft, window->left);
-                shaderSetUniform32u(shader.locations.boundsRight, window->left + window->width);
-                shaderSetUniform32u(shader.locations.boundsTop, window->top);
-                shaderSetUniform32u(shader.locations.boundsBottom, window->top + window->height);
-                flushRenderBuffer(GL_TRIANGLES, &renderBuffer);
-            });
-
-            SHADER_SCOPE(shaderUI.programId, {
-                shaderSetUniform4m(shaderUI.locations.matrixView, window->view);
-                shaderSetUniform4m(shaderUI.locations.matrixTransform, window->transform);
-                shaderSetUniform32u(shaderUI.locations.boundsLeft, window->left);
-                shaderSetUniform32u(shaderUI.locations.boundsRight, window->left + window->width);
-                shaderSetUniform32u(shaderUI.locations.boundsTop, window->top);
-                shaderSetUniform32u(shaderUI.locations.boundsBottom, window->top + window->height);
-                flushRenderBuffer(GL_TRIANGLES, &renderBufferUI);
-            });
+            editorWindowRender(&windows[i], 
+                        &shader, &shaderUI,
+                        &renderBuffer, &renderBufferUI, &renderBufferBackground,
+                        &font,
+                        time, currentWindowIndex == i);
         }
-         
+        
         if(panelActive){
-            panel.position = lerp(panel.position, v3(currentWindow->left, currentWindow->top, 0), 0.3);
-            panel.cursor = {panel.position.x + 12, panel.position.y + 12 + FONT_HEIGHT + 4, 0};
-            for(int i = 0; i < panel.buffer.cursor; ++i){
-                switch(panel.buffer.data[UserToGap(panel.buffer.gap, i)]){
-                    case 0:{
-                        }
-                        break;
-
-                    case '\t': {
-                            panel.cursor.x += FONT_HEIGHT * 2;
-                        }
-                        break;
-
-                    case '\n': {
-                            panel.cursor.y += FONT_HEIGHT;
-                            panel.cursor.x = panel.position.x + 12;
-                        }
-                        break;
-
-                    default: {
-                            Glyph glyph = font.glyphs[panel.buffer.data[UserToGap(panel.buffer.gap, i)] - ' '];
-                            panel.cursor.x += glyph.xadvance;
-                        }
-                        break;
-                }
-            }
-
-            pushQuad(&renderBufferBackground, panel.position, panel.size, uvs, {0.2, 0.2, 0.2});
-
-            if(time < 10){
-                pushQuad(&renderBufferUI, panel.cursor, {FONT_HEIGHT / 2, FONT_HEIGHT + 3}, uvs, v3(1, 1, 0));
-            }
-
-            SHADER_SCOPE(shaderUI.programId, {
-                shaderSetUniform4m(shaderUI.locations.matrixView, m4());
-                shaderSetUniform4m(shaderUI.locations.matrixTransform, m4());
-                shaderSetUniform32u(shaderUI.locations.boundsLeft, 0);
-                shaderSetUniform32u(shaderUI.locations.boundsRight, windowWidth);
-                shaderSetUniform32u(shaderUI.locations.boundsTop, 0);
-                shaderSetUniform32u(shaderUI.locations.boundsBottom, windowHeight);
-                flushRenderBuffer(GL_TRIANGLES, &renderBufferBackground);
-            });
-
-
-            SHADER_SCOPE(shaderUI.programId, {
-                shaderSetUniform4m(shaderUI.locations.matrixView, m4());
-                shaderSetUniform4m(shaderUI.locations.matrixTransform, m4());
-                shaderSetUniform32u(shaderUI.locations.boundsLeft, 0);
-                shaderSetUniform32u(shaderUI.locations.boundsRight, windowWidth);
-                shaderSetUniform32u(shaderUI.locations.boundsTop, 0);
-                shaderSetUniform32u(shaderUI.locations.boundsBottom, windowHeight);
-                flushRenderBuffer(GL_TRIANGLES, &renderBufferUI);
-            });
-
-            fontRenderGapBuffer({panel.position.x + 12, panel.position.y + 12 + FONT_HEIGHT + 4}, &panel.buffer, &renderBuffer, &renderBufferUI, &font, 0, FONT_HEIGHT * 4);
-            fontRender((u8*)panel.description, strlen(panel.description), {panel.position.x + 12, panel.position.y + FONT_HEIGHT + 12}, &renderBuffer, &font, {0.6, 0.6, 0.6});
-
-            SHADER_SCOPE(shader.programId, {
-                shaderSetUniform4m(shader.locations.matrixView, m4());
-                shaderSetUniform4m(shader.locations.matrixTransform, m4());
-                shaderSetUniform32u(shader.locations.boundsLeft, 0);
-                shaderSetUniform32u(shader.locations.boundsRight, windowWidth);
-                shaderSetUniform32u(shader.locations.boundsTop, 0);
-                shaderSetUniform32u(shader.locations.boundsBottom, windowHeight);
-                flushRenderBuffer(GL_TRIANGLES, &renderBuffer);
-            });
+            panelRender(&panel, currentWindow,
+                 &shader, &shaderUI,
+                 &renderBuffer, &renderBufferUI, &renderBufferBackground,
+                 &font,
+                 time, windowWidth, windowHeight);
         }
         
         SDL_GL_SwapWindow(window);

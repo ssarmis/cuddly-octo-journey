@@ -43,6 +43,30 @@ RenderBuffer createVertexArrayObject(u32 vertexBufferSize=VERTEX_BUFFER_SIZE, u3
     return result;
 }
 
+void pushPreProcesedQuadsIndices(RenderBuffer* buffer){
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, buffer->indexBufferId);
+    Index* indices = NULL;
+
+    indices = (Index*)glMapBuffer(GL_ELEMENT_ARRAY_BUFFER, GL_WRITE_ONLY);
+
+    Index* clone = indices;
+    Index offset = 0;
+    for(int i = 0; i < buffer->indexBufferSize / (6 * sizeof(Index)); ++i){
+        *indices++ = offset + 0;
+        *indices++ = offset + 1;
+        *indices++ = offset + 2;
+
+        *indices++ = offset + 1;
+        *indices++ = offset + 3;
+        *indices++ = offset + 2;
+        
+        offset += 4;
+    }
+
+    glUnmapBuffer(GL_ELEMENT_ARRAY_BUFFER);
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
+}
+
 void pushVerteciesToRenderBuffer(RenderBuffer* buffer, Vertex* vertecies, u32 amount){
     VERTEX_BUFFER_SCOPE(buffer->vertexBufferId, {
         u32 dataSize = amount * sizeof(Vertex);

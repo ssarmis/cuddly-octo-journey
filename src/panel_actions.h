@@ -4,6 +4,17 @@
 #include "panel.h"
 #include "gap_buffer.h"
 
+void saveFileAction(void* data0, void* data1){
+    EditorWindow* window = (EditorWindow*)data0;
+    GapBuffer* filenameBuffer = (GapBuffer*)data1;
+    char* filename = gapToString(filenameBuffer);
+
+    gapWriteFile(&window->buffer, filename);
+    TRACE("Saved file %s\n", window->buffer.filename);
+
+    window->backgroundColor = {0, 0.1, 0};
+}
+
 void gotoLineAction(void* data0, void* data1){
     EditorWindow* window = (EditorWindow*)data0;
     GapBuffer* lineBuffer = (GapBuffer*)data1;
