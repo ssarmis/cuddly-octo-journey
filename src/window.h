@@ -57,7 +57,12 @@ EditorWindow windowCreate(i32 width, i32 height, u32 left, u32 top){
 
 void editorWindowDecideCursorPositionByGapBuffer(EditorWindow* window, FontGL* font){
     for(int i = 0; i < window->buffer.cursor; ++i){
-        switch(window->buffer.data[UserToGap(window->buffer.gap, i)]){
+        i32 convertedOffset = UserToGap(window->buffer.gap, i);
+        if(convertedOffset >= window->buffer.size - 1){
+            break;
+        }
+
+        switch(window->buffer.data[convertedOffset]){
             case 0:{
                 }
                 break;
@@ -74,7 +79,7 @@ void editorWindowDecideCursorPositionByGapBuffer(EditorWindow* window, FontGL* f
                 break;
 
             default: {
-                    Glyph glyph = font->glyphs[window->buffer.data[UserToGap(window->buffer.gap, i)] - ' '];
+                    Glyph glyph = font->glyphs[window->buffer.data[convertedOffset] - ' '];
                     window->cursor.x += glyph.xadvance;
                 }
                 break;
@@ -120,7 +125,8 @@ void editorWindowRender(EditorWindow* window,
         flushRenderBuffer(GL_TRIANGLES, renderBufferBackground);
     });
 
-    fontRenderGapBuffer({window->left, window->top}, &window->buffer, renderBuffer, renderBufferUI, font, window->scrollTop, window->scrollBottom);
+    fontRenderGapBuffer({window->left, window->top}, &window->buffer, renderBuffer, renderBufferUI, font, 
+                        window->scrollTop - 40 * FONT_HEIGHT, window->scrollBottom + 40 * FONT_HEIGHT);
 
     if(activeWindow){
         if(time < 10){

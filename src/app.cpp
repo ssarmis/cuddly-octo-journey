@@ -297,6 +297,7 @@ int main(int argumentCount, char* arguments[]){
                             case SDL_SCANCODE_ESCAPE: {
                                     if(panelActive){
                                         panelActive = false;
+                                        currentBuffer = &currentWindow->buffer;
                                     }
                                 }
                                 break;
@@ -584,8 +585,8 @@ int main(int argumentCount, char* arguments[]){
                             case SDL_SCANCODE_DELETE: {
                                     if(backspaceReleased || backspaceTurbo){
                                         if(gapGetSelectionSize(currentBuffer)){
-                                            gapRemoveCharactersInRange(currentBuffer, currentBuffer->selection.start, currentBuffer->selection.end);
-                                            gapSeekCursor(currentBuffer, -(currentBuffer->selection.end - currentBuffer->selection.start));
+                                            i32 distance = gapRemoveCharactersInRange(currentBuffer, currentBuffer->selection.start, currentBuffer->selection.end);
+                                            gapSeekCursor(currentBuffer, -distance);
                                         } else {
                                             gapRemoveCharacterNearAt(currentBuffer, currentBuffer->cursor);
                                         }

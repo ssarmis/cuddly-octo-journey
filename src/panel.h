@@ -29,7 +29,11 @@ Panel panelCreate(v3 position, v2 size, char* description){
 
 void panelDecideCursorPositionByGapBuffer(Panel* panel, FontGL* font){
     for(int i = 0; i < panel->buffer.cursor; ++i){
-        switch(panel->buffer.data[UserToGap(panel->buffer.gap, i)]){
+        i32 convertedOffset = UserToGap(panel->buffer.gap, i);
+        if(convertedOffset >= panel->buffer.size - 1){
+            break;
+        }
+        switch(panel->buffer.data[convertedOffset]){
             case 0:{
                 }
                 break;
@@ -46,7 +50,7 @@ void panelDecideCursorPositionByGapBuffer(Panel* panel, FontGL* font){
                 break;
 
             default: {
-                    Glyph glyph = font->glyphs[panel->buffer.data[UserToGap(panel->buffer.gap, i)] - ' '];
+                    Glyph glyph = font->glyphs[panel->buffer.data[convertedOffset] - ' '];
                     panel->cursor.x += glyph.xadvance;
                 }
                 break;
