@@ -477,8 +477,11 @@ GapBuffer gapReadFile(const char* filename){
 
     FILE* file = fopen(filename, "rb");
     
-    ASSERT(file);
-
+    if(!file){
+        result.data = NULL;
+        return result;
+    }
+ 
     result.filename = (char*)filename;
 
     fseek(file, 0, SEEK_END);

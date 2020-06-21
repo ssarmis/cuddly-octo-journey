@@ -411,11 +411,13 @@ int main(int argumentCount, char* arguments[]){
                                     if(newlineReleased){
                                         if(panelActive){
                                             
-                                            panelActive = false;
-                                            panel.action(currentWindow, &panel.buffer);
-
-                                            currentBuffer = &currentWindow->buffer;
-
+                                            bool panelActionStatus = panel.action(currentWindow, &panel.buffer);
+                                            if(panelActionStatus){
+                                                panelActive = false;
+                                                currentBuffer = &currentWindow->buffer;
+                                            } else {
+                                                panel.shakeTime = 20;
+                                            }
                                         } else {
                                             i32 tabs = gapGetAmontOfTabsBeforeCursor(currentBuffer);
 

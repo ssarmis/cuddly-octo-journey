@@ -9,14 +9,16 @@ struct Panel {
     v3 position;
     v2 size;
     v3 cursor;
+    i32 shakeTime;
     char* description;
     GapBuffer buffer;
-    void (*action)(void*, void*);
+    bool (*action)(void*, void*);
 };
 
 Panel panelCreate(v3 position, v2 size, char* description){
 	Panel result = {};
 	
+    result.shakeTime = 0;
 	result.position = position;
 	result.size = size;
 	result.description = description;
@@ -56,10 +58,15 @@ void panelRender(Panel* panel, EditorWindow* currentWindow,
                  Shader* shader, Shader* shaderUI,
                  RenderBuffer* renderBuffer, RenderBuffer* renderBufferUI, RenderBuffer* renderBufferBackground,
                  FontGL* font,
-                 int time, u32 windowWidth, u32 windowHeight){
+                 i32 time, u32 windowWidth, u32 windowHeight){
     v2 uvs[4] = {};
 
-    panel->position = lerp(panel->position, v3(currentWindow->left, currentWindow->top, 0), 0.3);
+    if(panel->shakeTime){
+        panel->position = lerp(panel->position, v3(currentWindow->left + sin(time) * 5, currentWindow->top, 0), 0.3);
+        --panel->shakeTime;
+    } else {
+        panel->position = lerp(panel->position, v3(currentWindow->left, currentWindow->top, 0), 0.3);
+    }
     panel->cursor = {panel->position.x + 12, panel->position.y + 12 + FONT_HEIGHT + 4, 0};
     panelDecideCursorPositionByGapBuffer(panel, font);
 

@@ -4,7 +4,7 @@
 #include "panel.h"
 #include "gap_buffer.h"
 
-void saveFileAction(void* data0, void* data1){
+bool saveFileAction(void* data0, void* data1){
     EditorWindow* window = (EditorWindow*)data0;
     GapBuffer* filenameBuffer = (GapBuffer*)data1;
     char* filename = gapToString(filenameBuffer);
@@ -13,9 +13,11 @@ void saveFileAction(void* data0, void* data1){
     TRACE("Saved file %s\n", window->buffer.filename);
 
     window->backgroundColor = {0, 0.1, 0};
+
+    return true;
 }
 
-void gotoLineAction(void* data0, void* data1){
+bool gotoLineAction(void* data0, void* data1){
     EditorWindow* window = (EditorWindow*)data0;
     GapBuffer* lineBuffer = (GapBuffer*)data1;
 
@@ -26,9 +28,10 @@ void gotoLineAction(void* data0, void* data1){
     TRACE("Got to line: %d\n", line);
 
     // clean panel gap buffer
+    return true;
 }
 
-void openFileAction(void* data0, void* data1){
+bool openFileAction(void* data0, void* data1){
     EditorWindow* window = (EditorWindow*)data0;
     GapBuffer* filenameBuffer = (GapBuffer*)data1;
     char* filename = gapToString(filenameBuffer);
@@ -42,10 +45,18 @@ void openFileAction(void* data0, void* data1){
         TRACE("Saved file %s\n", window->buffer.filename);
     }
 
-    window->buffer = gapReadFile(filename);
+    GapBuffer buffer = gapReadFile(filename);
+
+    if(!buffer.data){
+        // clean panel buffer
+        return false;
+    }
+
+    window->buffer = buffer;
 
     window->scrollX = 0;
     window->scrollY = 0;
-
+    
+    return true;
     // clean panel gap buffer
 }
