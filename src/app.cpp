@@ -163,6 +163,8 @@ int main(int argumentCount, char* arguments[]){
 
     i32 time = 0;
 
+    keyBindingInitialize(&windowKeyboardBindingManager);
+
     while(!done){
         time++;
         time %= 20;
@@ -182,7 +184,11 @@ int main(int argumentCount, char* arguments[]){
 
         glActiveTexture(GL_TEXTURE0);
         glBindTexture(GL_TEXTURE_2D, font.textureId);
-        
+
+        // TODO(Sarmis) maybe only tick the window if a panel is active
+        // or just tick the panels first and consume the keystroke if
+        // it was used in a tick
+
         for(int i = 0; i < windowCount; ++i){
             if(i == currentWindowIndex){
                 editorWindowTick(&windows[i], &keyboardManager);

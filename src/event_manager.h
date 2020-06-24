@@ -204,10 +204,6 @@ void eventTick(bool* done, KeyboardManager* keyboardManager){
                             keyboardManager->currentActiveKeyStroke |= (character & 0xff);
 
                             #if 0
-
-                                gapInsertCharacterAt(currentBuffer, character, currentBuffer->cursor);
-                                gapIncreaseCursor(currentBuffer);
-
                                 // SPONGE
                                 // tick at typing stroke
                                 // well... yeah...about this function call...

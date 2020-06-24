@@ -61,21 +61,33 @@ EditorWindow windowCreate(i32 width, i32 height, u32 left, u32 top){
     return result;
 }
 
+static KeyboardBindingManager windowKeyboardBindingManager;
+
 #include "keyboard_manager.h"
 
+bool isAlphanumericCharacter(){
+    .
+    .
+    .
+}
+
 void editorWindowTick(EditorWindow* window, KeyboardManager* keyboardManager){
+    // TODO(Sarmis) move the condition in a function like "isAlphanumericCharacter()"
+    // also, make additional functions to see tabs and returns
     char potentialCharacter = keyboardManager->currentActiveKeyStroke & 0xff;
     if((potentialCharacter >= 'a' && potentialCharacter <= 'z') ||
        (potentialCharacter >= 'A' && potentialCharacter <= 'Z')){
            
         // TODO(Sarmis) well, this needs to be inserted into the buffer
+        gapInsertCharacterAt(&window->buffer, potentialCharacter, window->buffer.cursor);
+        gapIncreaseCursor(&window->buffer);
     } else {
-        // TODO(Sarmis)
-        // KeyboardBinding binding = keyBindingGetBindingByKey(keyboardBindingManager, keyboardManager->currentActiveKeyStroke) 
-        // if(!binding.key){
-        //    return
-        // }
-        // binding.keyAction(...);
+        KeyboardBinding binding = keyBindingGetBindingByKey(&windowKeyboardBindingManager, keyboardManager->currentActiveKeyStroke);
+        if(!binding.key){
+           return;
+        }
+
+        binding.keyAction(&window->buffer);
     }
 }
 
