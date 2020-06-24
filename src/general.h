@@ -369,3 +369,38 @@ static u32 readU32FromBuffer(u8* buffer){
     return result;
 }
 
+
+bool isSpacingCharacter(char character){
+    if(character == '\n' || character == '\r' ||
+       character == '\t' || character ==  ' '){
+        return true;
+    }
+    return false;
+}
+
+bool isSymbolCharacter(char character){
+    if(character == '`' || character == '~' || character == '!' ||
+       character == '@' || character == '#' || character == '$' ||
+       character == '%' || character == '^' || character == '&' ||
+       character == '*' || character == '(' || character == ')' ||
+       character == '-' || character == '=' || character == '+' ||
+       character == '_' || character == '[' || character == ']' ||
+       character == '\\' || character == '{' || character == '}' ||
+       character == ';' || character == '\'' || character == ':' ||
+       character == '"' || character == ',' || character == '.' ||
+       character == '/' || character == '<' || character == '>' || character == '?'){
+           return true;
+    }
+    return false;
+}
+
+bool isAlphanumericCharacter(char character){
+
+    if((character >= 'a' && character <= 'z') ||
+       (character >= 'A' && character <= 'Z') ||
+       (isSymbolCharacter(character) ||
+       (character >= '0' && character <= '9'))){
+           return true;
+       }
+    return false;
+}

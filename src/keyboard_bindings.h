@@ -30,18 +30,31 @@
 
 struct KeyboardBinding {
     u32 key;
-    void (*keyAction)(void*);
+    void (*keyAction1)(void*);
+    void (*keyAction2)(void*, void*);
 };
 
 struct KeyboardBindingManager {
     Buffer<KeyboardBinding> keyBindings;
 };
 
-void keyBindingAddEntry(KeyboardBindingManager* keyboardBindingManager, u32 key, void (*keyAction)(void*)){
-    KeyboardBinding binding = {
-        key, 
-        keyAction
-    };
+void keyBindingAddEntry2(KeyboardBindingManager* keyboardBindingManager, u32 key, void (*keyAction)(void*, void*)){
+    KeyboardBinding binding = {};
+
+    binding.key = key;
+    binding.keyAction1 = NULL;
+    binding.keyAction2 = keyAction;
+
+    bufferAppend<KeyboardBinding>(&keyboardBindingManager->keyBindings, &binding);
+}
+
+void keyBindingAddEntry1(KeyboardBindingManager* keyboardBindingManager, u32 key, void (*keyAction)(void*)){
+    KeyboardBinding binding = {};
+
+    binding.key = key;
+    binding.keyAction1 = keyAction;
+    binding.keyAction2 = NULL;
+
 
     bufferAppend<KeyboardBinding>(&keyboardBindingManager->keyBindings, &binding);
 }
@@ -60,6 +73,10 @@ void keyActionRemoveCharacterOnCursor(void* data){
 void keyActionMoveCursorToBegginingOfLine(void* data){
     GapBuffer* buffer = (GapBuffer*)data;
     gapSeekCursorToPreviousNewline(buffer);
+    u32 convertedCoordinate = UserToGap(buffer->gap, buffer->cursor);
+    if(isSpacingCharacter(buffer->data[convertedCoordinate])){
+        gapIncreaseCursor(buffer);
+    }
 }
 
 void keyActionMoveCursorToEndOfLine(void* data){
@@ -68,9 +85,39 @@ void keyActionMoveCursorToEndOfLine(void* data){
 }
 
 void keyActionMoveCursorToAboveLine(void* data){
+    GapBuffer* buffer = (GapBuffer*)data;
+
+    // u32 convertedCoordinate = UserToGap(buffer->gap, buffer->cursor);
+    // if(isSpacingCharacter(buffer->data[convertedCoordinate])){
+    //     gapDecreaseCursor(buffer);
+    // }
+
+    i32 distanceOnCurrentLineToBegging = gapGetDistanceFromPreviousNewline(buffer);
+    
+    if(!distanceOnCurrentLineToBegging){
+        gapSeekCursorToPreviousNewline(buffer);
+    } else {
+        gapSeekCursorToPreviousNewline(buffer);
+        // gapDecreaseCursor(buffer);
+
+        i32 lengthOfAboveLine = gapGetDistanceFromPreviousNewline(buffer);
+        if(lengthOfAboveLine > 0 && lengthOfAboveLine > distanceOnCurrentLineToBegging){
+            gapSeekCursor(buffer, -(lengthOfAboveLine - distanceOnCurrentLineToBegging));
+        }
+    }
 }
 
 void keyActionMoveCursorToBelowLine(void* data){
+    GapBuffer* buffer = (GapBuffer*)data;
+
+    i32 distanceOnCurrentLineToBegging = gapGetDistanceFromPreviousNewline(buffer);
+
+    gapSeekCursorToNewline(buffer);
+    // gapIncreaseCursor(buffer);
+
+    if(distanceOnCurrentLineToBegging > 0){
+        gapSeekCursor(buffer, distanceOnCurrentLineToBegging);
+    }
 }
 
 void keyActionMoveCursorLeft(void* data){
@@ -94,30 +141,41 @@ void keyActionMoveCursor10LinesDown(void* data){
 }
 
 void keyActionMoveCursorOverWordLeft(void* data){
+    GapBuffer* buffer = (GapBuffer*)data;
+
+    gapSeekCursorToPreviousCapitalOrSpace(buffer);
+
+    i32 convertedCoordinate = UserToGap(buffer->gap, buffer->cursor);
+    if(isSpacingCharacter(buffer->data[convertedCoordinate])){
+        gapIncreaseCursor(buffer);
+    }
 }
 
 void keyActionMoveCursorOverWordRight(void* data){
+    GapBuffer* buffer = (GapBuffer*)data;
+
+    gapSeekCursorToCapitalOrSpace(buffer);
 }
 
 
 void keyBindingInitialize(KeyboardBindingManager* keyboardBindingManager){
     // keyBindingAddEntry(keyboardBindingManager, KEY_RETURN,              keyActionInsertNewline);
 
-    keyBindingAddEntry(keyboardBindingManager, KEY_BACKSPACE,           keyActionRemoveCharacterBeforeCursor);
-    keyBindingAddEntry(keyboardBindingManager, KEY_DELETE,              keyActionRemoveCharacterOnCursor);
+    keyBindingAddEntry1(keyboardBindingManager, KEY_BACKSPACE,           keyActionRemoveCharacterBeforeCursor);
+    keyBindingAddEntry1(keyboardBindingManager, KEY_DELETE,              keyActionRemoveCharacterOnCursor);
 
-    keyBindingAddEntry(keyboardBindingManager, KEY_HOME,                keyActionMoveCursorToBegginingOfLine);
-    keyBindingAddEntry(keyboardBindingManager, KEY_END,                 keyActionMoveCursorToEndOfLine);
+    keyBindingAddEntry1(keyboardBindingManager, KEY_HOME,                keyActionMoveCursorToBegginingOfLine);
+    keyBindingAddEntry1(keyboardBindingManager, KEY_END,                 keyActionMoveCursorToEndOfLine);
 
-    keyBindingAddEntry(keyboardBindingManager, KEY_UP,                  keyActionMoveCursorToAboveLine);
-    keyBindingAddEntry(keyboardBindingManager, KEY_DOWN,                keyActionMoveCursorToBelowLine);
-    keyBindingAddEntry(keyboardBindingManager, KEY_LEFT,                keyActionMoveCursorLeft);
-    keyBindingAddEntry(keyboardBindingManager, KEY_RIGHT,               keyActionMoveCursorRight);
+    keyBindingAddEntry1(keyboardBindingManager, KEY_UP,                  keyActionMoveCursorToAboveLine);
+    keyBindingAddEntry1(keyboardBindingManager, KEY_DOWN,                keyActionMoveCursorToBelowLine);
+    keyBindingAddEntry1(keyboardBindingManager, KEY_LEFT,                keyActionMoveCursorLeft);
+    keyBindingAddEntry1(keyboardBindingManager, KEY_RIGHT,               keyActionMoveCursorRight);
 
-    keyBindingAddEntry(keyboardBindingManager, KEY_CTRL | KEY_UP,       keyActionMoveCursor10LinesUp);
-    keyBindingAddEntry(keyboardBindingManager, KEY_CTRL | KEY_DOWN,     keyActionMoveCursor10LinesDown);
-    keyBindingAddEntry(keyboardBindingManager, KEY_CTRL | KEY_LEFT,     keyActionMoveCursorOverWordLeft);
-    keyBindingAddEntry(keyboardBindingManager, KEY_CTRL | KEY_RIGHT,    keyActionMoveCursorOverWordRight);
+    keyBindingAddEntry1(keyboardBindingManager, KEY_CTRL | KEY_UP,       keyActionMoveCursor10LinesUp);
+    keyBindingAddEntry1(keyboardBindingManager, KEY_CTRL | KEY_DOWN,     keyActionMoveCursor10LinesDown);
+    keyBindingAddEntry1(keyboardBindingManager, KEY_CTRL | KEY_LEFT,     keyActionMoveCursorOverWordLeft);
+    keyBindingAddEntry1(keyboardBindingManager, KEY_CTRL | KEY_RIGHT,    keyActionMoveCursorOverWordRight);
 }
 
 KeyboardBinding keyBindingGetBindingByKey(KeyboardBindingManager* keyboardBindingManager, u32 key){

@@ -107,7 +107,7 @@ void gapMoveGap(GapBuffer* buffer, i32 position){
 }
 
 void gapReplaceCharacterAt(GapBuffer* buffer, char character, u32 position){
-    if(position < 0 && position <= buffer->size){
+    if(position < 0 || position > buffer->size - 1){
         return;
     }
     buffer->data[position] = character;
@@ -177,16 +177,17 @@ void gapSeekCursor(GapBuffer* buffer, i32 distance){
 
 i32 gapGetDistanceToNewline(GapBuffer* buffer){
     i32 clone = buffer->cursor;
-    i32 convertedCursor = UserToGap(buffer->gap, buffer->cursor);
+    i32 convertedCursor = UserToGap(buffer->gap, clone);
 
     // TODO(Sarmis) since the end of the buffer might me bagic
     // just let this here for now..
     while(buffer->data[convertedCursor] != '\n' &&
           buffer->data[convertedCursor] != '\0'){
-        convertedCursor = UserToGap(buffer->gap, ++clone);
+        convertedCursor = UserToGap(buffer->gap, clone + 1);
         if(convertedCursor < 0 || convertedCursor > buffer->size - 1){
             break;
         }
+        ++clone;
     }
     clone = clamp(clone, 0, buffer->size - 1);
     return (clone - buffer->cursor);
@@ -194,17 +195,18 @@ i32 gapGetDistanceToNewline(GapBuffer* buffer){
 
 i32 gapGetDistanceFromPreviousNewline(GapBuffer* buffer){
     i32 clone = buffer->cursor;
-    i32 convertedCursor = UserToGap(buffer->gap, buffer->cursor);
+    i32 convertedCursor = UserToGap(buffer->gap, clone);
     if(convertedCursor < 0 || convertedCursor > buffer->size - 1){
         clone = clamp(clone, 0, buffer->size - 1);
         return (buffer->cursor - clone);
     }
 
     while(buffer->data[convertedCursor] != '\n'){
-        convertedCursor = UserToGap(buffer->gap, --clone);
+        convertedCursor = UserToGap(buffer->gap, clone - 1);
         if(convertedCursor < 0 || convertedCursor > buffer->size - 1){
             break;
         }
+        --clone;
     }
 
     clone = clamp(clone, 0, buffer->size - 1);
@@ -575,6 +577,23 @@ void gapSeekCursorToMatch(GapBuffer* buffer, const char* match){
         }
     }
 }
+
+void gapClean(GapBuffer* buffer){
+    if(buffer->data){
+        delete[] buffer->data;
+    }
+
+    buffer->data = NULL;
+    buffer->size = 0;
+    buffer->gap.start = buffer->gap.end = 0;
+    buffer->dirty = false;
+}
+
+
+
+
+
+
 
 
 

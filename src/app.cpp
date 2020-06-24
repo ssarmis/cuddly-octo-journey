@@ -13,6 +13,7 @@
 #include "panel_actions.h"
 #include "panel_updates.h"
 #include "keyboard_manager.h"
+#include "layout_manager.h"
 #include "event_manager.h"
 
 #include <time.h>
@@ -84,20 +85,6 @@ int main(int argumentCount, char* arguments[]){
 
     bool done = false;
 
-    bool backspaceReleased = true;
-    bool homeReleased = true;
-    bool endReleased = true;
-    bool arrowReleased[4] = {true, true, true, true};
-    bool tabReleased = true;
-    bool newlineReleased = true;
-    bool pageDownReleased = true;
-    bool pageUpReleased = true;
-
-    bool controlSeeking = false;
-
-    bool backspaceTurbo = false;
-    bool arrowTurbo = false;
-
     u32 backspaceTime = 0;
     u32 arrowTime = 0;
 #endif
@@ -116,25 +103,24 @@ int main(int argumentCount, char* arguments[]){
         currentWindow->buffer = gapCreateEmpty();
     }
 
-    Panel openFilePanel = panelCreate({0, 0, 0}, {400, FONT_HEIGHT * 3 + 12 + 4}, "Open file");
-    openFilePanel.action = openFileAction;
-    openFilePanel.tick = openFileTick;
+    PanelGroup panelGroup = {};
 
-    Panel findPanel = panelCreate({0, 0, 0}, {400, FONT_HEIGHT * 3 + 12 + 4}, "Find");
-    findPanel.action = findAction;
+    // TODO(Sarmis) make initialization for these
+    panelGroup.openFilePanel = panelCreate({0, 0, 0}, {400, FONT_HEIGHT * 3 + 12 + 4}, "Open file");
+    panelGroup.openFilePanel.action = openFileAction;
+    panelGroup.openFilePanel.tick = openFileTick;
 
-    Panel gotoLinePanel = panelCreate({0, 0, 0}, {400, FONT_HEIGHT * 3 + 12 + 4}, "Goto line");
-    gotoLinePanel.action = gotoLineAction;
+    panelGroup.findPanel = panelCreate({0, 0, 0}, {400, FONT_HEIGHT * 3 + 12 + 4}, "Find");
+    panelGroup.findPanel.action = findAction;
 
-    Panel saveFilePanel = panelCreate({0, 0, 0}, {400, FONT_HEIGHT * 3 + 12 + 4}, "Save file");
-    saveFilePanel.action = saveFileAction;
+    panelGroup.gotoLinePanel = panelCreate({0, 0, 0}, {400, FONT_HEIGHT * 3 + 12 + 4}, "Goto line");
+    panelGroup.gotoLinePanel.action = gotoLineAction;
 
-    Panel panel = openFilePanel;
-
-    bool panelActive = false;
+    panelGroup.saveFilePanel = panelCreate({0, 0, 0}, {400, FONT_HEIGHT * 3 + 12 + 4}, "Save file");
+    panelGroup.saveFilePanel.action = saveFileAction;
 
 #if 1
-    KeyboardManager keyboardManager;
+    KeyboardManager keyboardManager = {};
 
     for(char c = 'a'; c <= 'z'; ++c){
         keyboardManager.shiftCharactersLUT[c] = c - ' ';
@@ -163,7 +149,10 @@ int main(int argumentCount, char* arguments[]){
 
     i32 time = 0;
 
+    // TODO(Sarmis) since this is only stuff relating window
+    // key binds, the function should be named and placed better
     keyBindingInitialize(&windowKeyboardBindingManager);
+    layoutKeyBindingInitialize(&layoutManagerKeybindings);
 
     while(!done){
         time++;
@@ -174,6 +163,7 @@ int main(int argumentCount, char* arguments[]){
 
         // TODO(Sarmis) make something to hold this "done"
         eventTick(&done, &keyboardManager);
+        layoutManagerTick(&panelGroup, currentWindow, &keyboardManager);
 
         v2 uvs[4] = {};
 
@@ -190,7 +180,7 @@ int main(int argumentCount, char* arguments[]){
         // it was used in a tick
 
         for(int i = 0; i < windowCount; ++i){
-            if(i == currentWindowIndex){
+            if(i == currentWindowIndex && !panelGroup.panel.active){
                 editorWindowTick(&windows[i], &keyboardManager);
             }
             editorWindowRender(&windows[i], 
@@ -200,8 +190,9 @@ int main(int argumentCount, char* arguments[]){
                         time, currentWindowIndex == i);
         }
         
-        if(panelActive){
-            panelRender(&panel, currentWindow,
+        if(panelGroup.panel.active){
+            panelGroup.panel.tick(&panelGroup.panel, currentWindow, &keyboardManager);
+            panelRender(&panelGroup.panel, currentWindow,
                  &shader, &shaderUI,
                  &renderBuffer, &renderBufferUI, &renderBufferBackground,
                  &font,

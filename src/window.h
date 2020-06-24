@@ -65,30 +65,24 @@ static KeyboardBindingManager windowKeyboardBindingManager;
 
 #include "keyboard_manager.h"
 
-bool isAlphanumericCharacter(){
-    .
-    .
-    .
-}
-
 void editorWindowTick(EditorWindow* window, KeyboardManager* keyboardManager){
-    // TODO(Sarmis) move the condition in a function like "isAlphanumericCharacter()"
-    // also, make additional functions to see tabs and returns
-    char potentialCharacter = keyboardManager->currentActiveKeyStroke & 0xff;
-    if((potentialCharacter >= 'a' && potentialCharacter <= 'z') ||
-       (potentialCharacter >= 'A' && potentialCharacter <= 'Z')){
-           
-        // TODO(Sarmis) well, this needs to be inserted into the buffer
-        gapInsertCharacterAt(&window->buffer, potentialCharacter, window->buffer.cursor);
-        gapIncreaseCursor(&window->buffer);
-    } else {
-        KeyboardBinding binding = keyBindingGetBindingByKey(&windowKeyboardBindingManager, keyboardManager->currentActiveKeyStroke);
-        if(!binding.key){
-           return;
+    if(!(keyboardManager->currentActiveKeyStroke & KEY_CTRL)){
+        char potentialCharacter = keyboardManager->currentActiveKeyStroke & 0xff;
+        if(isAlphanumericCharacter(potentialCharacter)){
+            gapInsertCharacterAt(&window->buffer, potentialCharacter, window->buffer.cursor);
+            gapIncreaseCursor(&window->buffer);
+        } else if(isSpacingCharacter(potentialCharacter)){
+            gapInsertCharacterAt(&window->buffer, potentialCharacter, window->buffer.cursor);
+            gapIncreaseCursor(&window->buffer);
         }
-
-        binding.keyAction(&window->buffer);
     }
+
+    KeyboardBinding binding = keyBindingGetBindingByKey(&windowKeyboardBindingManager, keyboardManager->currentActiveKeyStroke);
+    if(!binding.key){
+        return;
+    }
+
+    binding.keyAction1(&window->buffer);
 }
 
 void editorWindowDecideCursorPositionByGapBuffer(EditorWindow* window, FontGL* font){

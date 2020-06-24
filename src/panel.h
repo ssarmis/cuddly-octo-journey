@@ -6,7 +6,11 @@
 #include "gap_buffer.h"
 #include "colors.h"
 
+#include "keyboard_bindings.h"
+#include "keyboard_manager.h"
+
 struct Panel {
+    bool active;
     v3 position;
     v2 size;
     v3 cursor;
@@ -15,14 +19,53 @@ struct Panel {
     Buffer<char*> suggestions;
     GapBuffer buffer;
     bool (*action)(void*, void*);
-    void (*tick)(void*);
+    bool (*tick)(void*, void*, void*);
 };
 
-void panelDefaultTick(void* data){}
+struct PanelGroup {
+    Panel panel; // the actual panel that will be ticked and displayed
+    Panel openFilePanel;
+    Panel findPanel;
+    Panel saveFilePanel;
+    Panel gotoLinePanel;
+};
+
+// TODO(Sarmis) add a panelKeyBindingsManger
+bool panelDefaultTick(void* data0, void* data1, void* data2){
+    Panel* panel = (Panel*)data0;
+    EditorWindow* currentWindow = (EditorWindow*) data1;
+    KeyboardManager* keyboardManager = (KeyboardManager*)data2;
+
+    if(!(keyboardManager->currentActiveKeyStroke & KEY_CTRL)){
+        char potentialCharacter = keyboardManager->currentActiveKeyStroke & 0xff;
+        if(isAlphanumericCharacter(potentialCharacter)){
+            gapInsertCharacterAt(&panel->buffer, potentialCharacter, panel->buffer.cursor);
+            gapIncreaseCursor(&panel->buffer);
+            return true;
+        } else if(keyboardManager->currentActiveKeyStroke & KEY_BACKSPACE){
+            keyActionRemoveCharacterBeforeCursor(&panel->buffer);
+            return true;
+        } else {
+            if(keyboardManager->currentActiveKeyStroke & KEY_RETURN){
+                // TODO(Sarmis) panel->action(...)
+                bool actionStatus = panel->action(currentWindow, &panel->buffer);
+                if(!actionStatus){
+                    panel->shakeTime = 20;
+                } else {
+                    panel->active = false;
+                    gapClean(&panel->buffer);
+                }
+            }
+        }
+    }
+
+    return false;
+}
 
 Panel panelCreate(v3 position, v2 size, char* description){
 	Panel result = {};
-	
+
+    result.active = false;
     result.tick = panelDefaultTick;
     result.shakeTime = 0;
 	result.position = position;
@@ -32,6 +75,8 @@ Panel panelCreate(v3 position, v2 size, char* description){
 	
     return result;
 }
+
+
 
 void panelDecideCursorPositionByGapBuffer(Panel* panel, FontGL* font){
     for(int i = 0; i < panel->buffer.cursor; ++i){
