@@ -298,7 +298,7 @@ FontGL createFont(){
 
     u8* bitmap = new u8[512 * 512];
     u8* fontFileData = new u8[1 << 20];
-    fread(fontFileData, 1, 1 << 20, fopen("/home/stephan/cuddly-octo-journey/LiberationMono-Regular.ttf", "rb"));
+    fread(fontFileData, 1, 1 << 20, fopen("LiberationMono-Regular.ttf", "rb"));
     stbtt_BakeFontBitmap(fontFileData, 0, FONT_HEIGHT, bitmap, 512, 512, 32, 96, result.glyphs); // no guarantee this fits!
     
     

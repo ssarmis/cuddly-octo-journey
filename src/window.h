@@ -5,6 +5,8 @@
 #include "gap_buffer.h"
 #include "math.h"
 
+#include "keyboard_bindings.h"
+
 struct EditorWindow {
     i32 width;
     i32 height;
@@ -57,6 +59,24 @@ EditorWindow windowCreate(i32 width, i32 height, u32 left, u32 top){
     result.backgroundColor = DEFAULT_COLOR_BACKGROUND;
 
     return result;
+}
+
+#include "keyboard_manager.h"
+
+void editorWindowTick(EditorWindow* window, KeyboardManager* keyboardManager){
+    char potentialCharacter = keyboardManager->currentActiveKeyStroke & 0xff;
+    if((potentialCharacter >= 'a' && potentialCharacter <= 'z') ||
+       (potentialCharacter >= 'A' && potentialCharacter <= 'Z')){
+           
+        // TODO(Sarmis) well, this needs to be inserted into the buffer
+    } else {
+        // TODO(Sarmis)
+        // KeyboardBinding binding = keyBindingGetBindingByKey(keyboardBindingManager, keyboardManager->currentActiveKeyStroke) 
+        // if(!binding.key){
+        //    return
+        // }
+        // binding.keyAction(...);
+    }
 }
 
 void editorWindowDecideCursorPositionByGapBuffer(EditorWindow* window, FontGL* font){

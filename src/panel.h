@@ -103,7 +103,7 @@ void panelRender(Panel* panel, EditorWindow* currentWindow,
         v3 position = panel->position + v3(xOffset + 12, yAdjustment + yOffset + FONT_HEIGHT * i, 0);
         v2 size = v2(panel->size.x - 12, FONT_HEIGHT + 3);
         pushQuad(renderBufferBackground, position, size, uvs, DEFAULT_COLOR_PANEL_BACKGROUND_SUGGESTION);
-        fontRender((u8*)panel->suggestions.array[i], strlen(panel->suggestions.array[i]), {position.x, position.y}, renderBuffer, font, DEFAULT_COLOR_TEXT_PANEL_SUGGESTION);
+        fontRender((u8*)panel->suggestions.array[i], strlen(panel->suggestions.array[i]), {position.x + 12, position.y + 12}, renderBuffer, font, DEFAULT_COLOR_TEXT_PANEL_SUGGESTION);
     }
 
     SHADER_SCOPE(shaderUI->programId, {
