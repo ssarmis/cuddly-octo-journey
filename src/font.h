@@ -23,20 +23,18 @@ struct FontGL {
     GLuint textureId;
 };
 
-void fontRenderGapBuffer(v2 position, GapBuffer* buffer, RenderBuffer* renderBuffer, RenderBuffer* renderBufferUI, FontGL* font, r32 upperLine=0, r32 bottomLine=0){
+void fontRenderGapBufferNoHighlights(v2 position, GapBuffer* buffer, RenderBuffer* renderBuffer, RenderBuffer* renderBufferUI, FontGL* font, r32 upperLine=0, r32 bottomLine=0, v3 defaultColor=DEFAULT_COLOR_TEXT){
     v2 cursor = position;
     cursor += v2(0, FONT_HEIGHT);
 
     v2 selectionCursor = position;
-    v3 color = DEFAULT_COLOR_TEXT;
+    v3 color = defaultColor;
     u32 size = 0;
 
     glBindBuffer(GL_ARRAY_BUFFER, renderBuffer->vertexBufferId);
     Vertex* vertices = NULL;
 
     vertices = (Vertex*)glMapBuffer(GL_ARRAY_BUFFER, GL_WRITE_ONLY);
-
-    bool isString = false;
 
     for(int i = 0; i < buffer->size; ++i){
         if(i >= buffer->gap.start && i < buffer->gap.end){
@@ -51,7 +49,7 @@ void fontRenderGapBuffer(v2 position, GapBuffer* buffer, RenderBuffer* renderBuf
 
         i32 glyphIndex = character - ' ';
         Glyph glyph = font->glyphs[glyphIndex];
-        
+
         if(character == '\n'){
             cursor.x = position.x;
             cursor.y += FONT_HEIGHT;
@@ -64,16 +62,127 @@ void fontRenderGapBuffer(v2 position, GapBuffer* buffer, RenderBuffer* renderBuf
                 break;
             }
 
-            if(!size){
-                // NOTE(Sarmis) if you ever though you wrote bad code
-                // you never saw this approach/function here
-                keywordPeek(&buffer->data[i], &color, &size);
+            v2 uvs[] = {
+                v2(glyph.x0 / 512.0, glyph.y1 / 512.0),
+                v2(glyph.x1 / 512.0, glyph.y1 / 512.0),
+                v2(glyph.x0 / 512.0, glyph.y0 / 512.0),
+                v2(glyph.x1 / 512.0, glyph.y0 / 512.0),
+            };
+
+            r32 w = (glyph.x1 - glyph.x0);
+            r32 h = (glyph.y1 - glyph.y0);
+
+            v3 position = v3(cursor.x + glyph.xoff, cursor.y + glyph.yoff, 0);
+
+            *vertices++ = Vertex(position,               uvs[2], color);
+            *vertices++ = Vertex(position + v3(w, 0, 0), uvs[3], color);
+            *vertices++ = Vertex(position + v3(0, h, 0), uvs[0], color);
+            *vertices++ = Vertex(position + v3(w, h, 0), uvs[1], color);
+
+            renderBuffer->totalUsedVertices += 4;
+            renderBuffer->totalUsedIndices += 6;
+
+            cursor.x += (glyph.xadvance);
+        }
+    }
+
+    glUnmapBuffer(GL_ARRAY_BUFFER);
+    glBindBuffer(GL_ARRAY_BUFFER, 0);
+
+    v2 uvs[4] = {};
+    
+    // TODO(Sarmis) not proud of this...will change...
+    for(int i = 0; i < buffer->size; ++i){
+        if(i >= buffer->gap.start && i < buffer->gap.end){
+            continue;
+        }
+
+        char character = buffer->data[i];
+        i32 glyphIndex = character - ' ';
+        Glyph glyph = font->glyphs[glyphIndex];
+       
+        if(character == '\n'){
+            selectionCursor.x = position.x;
+            selectionCursor.y += FONT_HEIGHT;
+        } else if(character == '\t'){
+            selectionCursor.x += FONT_HEIGHT * 2;
+        } else {
+            if(i >= UserToGap(buffer->gap, buffer->selection.start) &&
+                i < UserToGap(buffer->gap, buffer->selection.end)){
+                pushQuad(renderBufferUI, v3(selectionCursor.x, selectionCursor.y + 3, 0), 
+                        v2(FONT_HEIGHT / 2, FONT_HEIGHT + 3), uvs, SELECTION_COLOR_TEXT);
+            }
+
+            selectionCursor.x += (glyph.xadvance);
+        }
+    }
+}
+
+void fontRenderGapBuffer(v2 position, GapBuffer* buffer, RenderBuffer* renderBuffer, RenderBuffer* renderBufferUI, FontGL* font, r32 upperLine=0, r32 bottomLine=0, v3 defaultColor=DEFAULT_COLOR_TEXT){
+    v2 cursor = position;
+    cursor += v2(0, FONT_HEIGHT);
+
+    v2 selectionCursor = position;
+    v3 color = defaultColor;
+    u32 size = 0;
+
+    glBindBuffer(GL_ARRAY_BUFFER, renderBuffer->vertexBufferId);
+    Vertex* vertices = NULL;
+
+    vertices = (Vertex*)glMapBuffer(GL_ARRAY_BUFFER, GL_WRITE_ONLY);
+
+    bool isString = false;
+    bool isComment = false;
+
+    for(int i = 0; i < buffer->size; ++i){
+        if(i >= buffer->gap.start && i < buffer->gap.end){
+            continue;
+        }
+
+        if(!buffer->data[i]){
+            continue;
+        }
+        
+        char character = buffer->data[i];
+        char nextCharacter = 0;
+        if(i + 1 <= buffer->size - 1){
+            nextCharacter = buffer->data[i + 1];
+        }
+
+        i32 glyphIndex = character - ' ';
+        Glyph glyph = font->glyphs[glyphIndex];
+
+        if(character == '\n'){
+            cursor.x = position.x;
+            cursor.y += FONT_HEIGHT;
+            isComment = false;
+        } else if(character == '\t'){
+            cursor.x += FONT_HEIGHT * 2;
+        } else {
+            if(cursor.y < upperLine){
+                continue;
+            } else if(cursor.y > bottomLine){
+                break;
+            }
+
+            if(nextCharacter){
+                if(character == '/' && nextCharacter == '/'){
+                    isComment = true;
+                }
+            }
+
+            if(!isComment){
+                if(!size){
+                    // NOTE(Sarmis) if you ever though you wrote bad code
+                    // you never saw this approach/function here
+                    keywordPeek(&buffer->data[i], &color, &size);
+                }
             }
 
             if(size){
                 --size;
                 if(!size){
-                    color = DEFAULT_COLOR_TEXT;
+                    color = defaultColor;
                 }
             }
 
@@ -97,7 +206,9 @@ void fontRenderGapBuffer(v2 position, GapBuffer* buffer, RenderBuffer* renderBuf
                 }
             }
 
-            if(isString) {
+            if(isComment){
+                color = DEFAULT_COLOR_COMMENT;
+            } else if(isString) {
                 color = STRING_COLOR_TEXT;
             }
 
@@ -114,7 +225,7 @@ void fontRenderGapBuffer(v2 position, GapBuffer* buffer, RenderBuffer* renderBuf
             cursor.x += (glyph.xadvance);
 
             if(!isString && !size){
-                color = DEFAULT_COLOR_TEXT;
+                color = defaultColor;
             }
         }
     }
@@ -187,7 +298,7 @@ FontGL createFont(){
 
     u8* bitmap = new u8[512 * 512];
     u8* fontFileData = new u8[1 << 20];
-    fread(fontFileData, 1, 1 << 20, fopen("LiberationMono-Regular.ttf", "rb"));
+    fread(fontFileData, 1, 1 << 20, fopen("/home/stephan/cuddly-octo-journey/LiberationMono-Regular.ttf", "rb"));
     stbtt_BakeFontBitmap(fontFileData, 0, FONT_HEIGHT, bitmap, 512, 512, 32, 96, result.glyphs); // no guarantee this fits!
     
     

@@ -4,6 +4,18 @@
 #include "panel.h"
 #include "gap_buffer.h"
 
+bool findAction(void* data0, void* data1){
+    EditorWindow* window = (EditorWindow*)data0;
+    GapBuffer* matchBuffer = (GapBuffer*)data1;
+    char* match = gapToString(matchBuffer);
+
+    gapSeekCursorToMatch(&window->buffer, match);
+
+    // window->backgroundColor = {0, 0.1, 0};
+
+    return false;
+}
+
 bool saveFileAction(void* data0, void* data1){
     EditorWindow* window = (EditorWindow*)data0;
     GapBuffer* filenameBuffer = (GapBuffer*)data1;

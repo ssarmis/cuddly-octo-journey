@@ -20,6 +20,7 @@ Keyword KEYWORDS[] = {
     {"#defined", 8, KEYWORD_COLOR_SPECIAL},
     {"#pragma", 7, KEYWORD_COLOR_SPECIAL},
 
+    {"bool", 4, KEYWORD_COLOR_TYPE},
     {"unsigned", 8, KEYWORD_COLOR_TYPE},
     {"char", 4, KEYWORD_COLOR_TYPE},
     {"short", 5, KEYWORD_COLOR_TYPE},
@@ -57,7 +58,7 @@ Keyword KEYWORDS[] = {
 };
 
 void keywordPeek(u8* data, v3* color, u32* size){
-// NOTE(Sarmis) yes, this has no bounds check
+	// NOTE(Sarmis) yes, this has no bounds check
     // this could end up in a segmentation fault
     // good for me I am only reading and not also 
     // writing :D
@@ -67,7 +68,7 @@ void keywordPeek(u8* data, v3* color, u32* size){
     if(!(*neighbourLeft >= 'a' && *neighbourLeft <= 'z') &&
        !(*neighbourLeft >= 'A' && *neighbourLeft <= 'Z')){
 
-        for(int i = 0; i < 37; ++i){
+        for(int i = 0; i < 38; ++i){
             Keyword keyword = KEYWORDS[i];
             u8* clone = data;
             u8* name = (u8*)keyword.name;

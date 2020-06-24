@@ -11,6 +11,7 @@
 #include "window.h"
 #include "panel.h"
 #include "panel_actions.h"
+#include "panel_updates.h"
 
 #include <time.h>
 
@@ -115,10 +116,13 @@ int main(int argumentCount, char* arguments[]){
 
     Panel openFilePanel = panelCreate({0, 0, 0}, {400, FONT_HEIGHT * 3 + 12 + 4}, "Open file");
     openFilePanel.action = openFileAction;
+    openFilePanel.tick = openFileTick;
 
     Panel findPanel = panelCreate({0, 0, 0}, {400, FONT_HEIGHT * 3 + 12 + 4}, "Find");
+    findPanel.action = findAction;
 
     Panel gotoLinePanel = panelCreate({0, 0, 0}, {400, FONT_HEIGHT * 3 + 12 + 4}, "Goto line");
+    gotoLinePanel.action = gotoLineAction;
 
     Panel saveFilePanel = panelCreate({0, 0, 0}, {400, FONT_HEIGHT * 3 + 12 + 4}, "Save file");
     saveFilePanel.action = saveFileAction;
@@ -154,6 +158,7 @@ int main(int argumentCount, char* arguments[]){
     shiftCharactersLUT['.'] = '>';
     shiftCharactersLUT['='] = '+';
     shiftCharactersLUT['-'] = '_';
+    shiftCharactersLUT[';'] = ':';
 
     i32 time = 0;
 
@@ -190,10 +195,16 @@ int main(int argumentCount, char* arguments[]){
 
                                         windows[i].scrollTop = windows[i].top;
                                         windows[i].scrollBottom = windows[i].bottom;
+                                        windows[i].scrollLeft = windows[i].left;
+                                        windows[i].scrollRight = windows[i].left + windows[i].width;
+
                                         windows[i].buffer.cursor = 0;
+                                        
                                         windows[i].scrollY = 0;
                                         windows[i].scrollX = 0;
                                     }
+
+                                    // this shouldn't be here...
 
                                     SHADER_SCOPE(shader.programId, {
                                         shaderSetUniform4m(shader.locations.matrixPerspective, 
@@ -372,8 +383,11 @@ int main(int argumentCount, char* arguments[]){
                                             currentBuffer->selection.start = currentBuffer->selection.end;
                                         }
 
-                                        if(currentBuffer->data[UserToGap(currentBuffer->gap, currentBuffer->cursor)] != '\n'){
-                                            gapSeekCursorToNewline(currentBuffer);
+                                        i32 convertedCoordinate = UserToGap(currentBuffer->gap, currentBuffer->cursor);
+                                        if(!(convertedCoordinate < 0 || convertedCoordinate > currentBuffer->size - 1)){
+                                            if(currentBuffer->data[convertedCoordinate] != '\n'){
+                                                gapSeekCursorToNewline(currentBuffer);
+                                            }
                                         }
 
                                         if(shiftPressed){
@@ -493,17 +507,18 @@ int main(int argumentCount, char* arguments[]){
                                         if(controlSeeking){
                                             gapSeekCursorINewlinesIfPossible(currentBuffer, 10);
                                         } else {
-                                            gapSeekCursorToNewline(currentBuffer);
+                                            // gapSeekCursorToNewline(currentBuffer);
+                                            gapSeekCursorINewlinesIfPossible(currentBuffer, 2);
 
-                                            if(currentBuffer->cursor + 1 < currentBuffer->size){
-                                                gapIncreaseCursor(currentBuffer);
-                                                i32 lineLength = gapGetDistanceToNewline(currentBuffer);
-                                                if(distance <= lineLength){
-                                                    gapSeekCursor(currentBuffer, distance - 1);
-                                                } else {
-                                                    gapSeekCursor(currentBuffer, lineLength);
-                                                }
-                                            }
+                                            // if(currentBuffer->cursor + 1 < currentBuffer->size-1){
+                                            //     gapIncreaseCursor(currentBuffer);
+                                            //     i32 lineLength = gapGetDistanceToNewline(currentBuffer);
+                                            //     if(distance <= lineLength){
+                                            //         gapSeekCursor(currentBuffer, distance - 1);
+                                            //     } else {
+                                            //         gapSeekCursor(currentBuffer, lineLength);
+                                            //     }
+                                            // }
                                         }
 
                                         if(shiftPressed){
@@ -532,7 +547,8 @@ int main(int argumentCount, char* arguments[]){
 
                                         if(controlSeeking){
                                             gapSeekCursorToPreviousCapitalOrSpace(currentBuffer);
-                                            if(currentBuffer->data[UserToGap(currentBuffer->gap, currentBuffer->cursor)] == '\n'){
+                                            i32 convertedCoordinate = UserToGap(currentBuffer->gap, currentBuffer->cursor);
+                                            if(currentBuffer->data[convertedCoordinate] == '\n'){
                                                 gapIncreaseCursor(currentBuffer);
                                             }
                                         } else {
@@ -683,7 +699,7 @@ int main(int argumentCount, char* arguments[]){
                                                         } else {
                                                             gapWriteFile(currentBuffer);
                                                             currentWindow->backgroundColor = {0, 0.1, 0};
-                                                            TRACE("Saved file %s\n", currentBuffer->filename);
+                                                            TRACE("Saved fileasdasdasd %s\n", currentBuffer->filename);
                                                         }
                                                     }
                                                 }
@@ -748,10 +764,6 @@ int main(int argumentCount, char* arguments[]){
         glActiveTexture(GL_TEXTURE0);
         glBindTexture(GL_TEXTURE_2D, font.textureId);
         
-        currentWindow->backgroundColor = lerp(currentWindow->backgroundColor, DEFAULT_COLOR_BACKGROUND, 0.1);
-        pushQuad(&renderBufferBackground, {currentWindow->left, currentWindow->top, 0},
-                {currentWindow->width, currentWindow->height}, uvs, currentWindow->backgroundColor);
-
         for(int i = 0; i < windowCount; ++i){
             editorWindowRender(&windows[i], 
                         &shader, &shaderUI,
@@ -761,6 +773,8 @@ int main(int argumentCount, char* arguments[]){
         }
         
         if(panelActive){
+            panel.tick(&panel);
+
             panelRender(&panel, currentWindow,
                  &shader, &shaderUI,
                  &renderBuffer, &renderBufferUI, &renderBufferBackground,

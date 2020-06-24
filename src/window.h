@@ -13,6 +13,8 @@ struct EditorWindow {
     r32 scrollX;
     r32 scrollTop;
     r32 scrollBottom;
+    r32 scrollLeft;
+    r32 scrollRight;
 
     u32 left;
     u32 top;
@@ -48,6 +50,8 @@ EditorWindow windowCreate(i32 width, i32 height, u32 left, u32 top){
 
     result.scrollTop = result.top;
     result.scrollBottom = result.bottom;
+    result.scrollLeft = result.left;
+    result.scrollRight = result.left + result.width;
 
     result.buffer = gapCreateEmpty();
     result.backgroundColor = DEFAULT_COLOR_BACKGROUND;
@@ -98,7 +102,19 @@ void editorWindowRender(EditorWindow* window,
     editorWindowDecideCursorPositionByGapBuffer(window, font);
     
     window->cursor.y += 3;
-    window->transform = translate({window->scrollX, window->scrollY, 0});
+    window->transform = translate({-window->scrollX, window->scrollY, 0});
+
+    if(window->cursor.x >= window->scrollRight){
+        i32 distance = window->cursor.x - window->scrollRight + FONT_HEIGHT / 2;
+        window->scrollRight += distance;
+        window->scrollLeft += distance;
+        window->scrollX += distance;
+    } else if(window->cursor.x <= window->scrollLeft){
+        i32 distance = window->scrollLeft - window->cursor.x;
+        window->scrollRight -= distance;
+        window->scrollLeft -= distance;
+        window->scrollX -= distance;
+    }
 
     if(window->cursor.y <= window->scrollTop){
         i32 distance = window->scrollTop - window->cursor.y;
@@ -107,13 +123,17 @@ void editorWindowRender(EditorWindow* window,
         window->scrollY += distance;
     } else if(window->cursor.y >= window->scrollBottom){
         i32 distance = window->cursor.y - window->scrollBottom + FONT_HEIGHT;
-        window->scrollY -= distance;
         window->scrollBottom += distance;
         window->scrollTop += distance;
+        window->scrollY -= distance;
     }
 
+    window->backgroundColor = lerp(window->backgroundColor, DEFAULT_COLOR_BACKGROUND, 0.1);
+    pushQuad(renderBufferBackground, {window->left + window->scrollX, window->top - window->scrollY, 0},
+            {window->width, window->height}, uvs, window->backgroundColor);
+
     // current editing line
-    pushQuad(renderBufferBackground, v3(window->left, window->cursor.y, 0), {window->width, FONT_HEIGHT + 3}, uvs, v3(0, 0, 0));
+    pushQuad(renderBufferBackground, v3(window->left + window->scrollX, window->cursor.y, 0), {window->width, FONT_HEIGHT + 3}, uvs, DEFAULT_COLOR_LINE);
 
     SHADER_SCOPE(shaderUI->programId, {
         shaderSetUniform4m(shaderUI->locations.matrixView, window->view);
@@ -130,7 +150,7 @@ void editorWindowRender(EditorWindow* window,
 
     if(activeWindow){
         if(time < 10){
-            pushQuad(renderBufferUI, window->cursor, {FONT_HEIGHT / 2, FONT_HEIGHT + 3}, uvs, v3(1, 1, 0));
+            pushQuad(renderBufferUI, window->cursor, {FONT_HEIGHT / 2, FONT_HEIGHT + 3}, uvs, DEFAULT_COLOR_CURSOR);
         }
     }
 

@@ -30,6 +30,7 @@ struct GapBuffer {
     Gap gap;
     Selection selection;
 };
+
 i32 gapGetGapSize(GapBuffer* buffer){
     return (buffer->gap.end - buffer->gap.start);
 }
@@ -52,13 +53,13 @@ void gapPrintGap(GapBuffer* buffer){
 }
 // #endif
 
-void gapInitializeGap(GapBuffer* buffer, u32 position, u32 size){
+void gapInitializeGap(GapBuffer* buffer, i32 position, i32 size){
     buffer->gap.start = position;
     buffer->gap.end = buffer->gap.start + size;
     // TODO(Sarmis) add assertions for when outside buffer
 }
 
-void gapGrowGap(GapBuffer* buffer, u32 size){
+void gapGrowGap(GapBuffer* buffer, i32 size){
     u8* clone = buffer->data;
     
     buffer->data = new u8[buffer->size + size];
@@ -79,24 +80,19 @@ void gapGrowGap(GapBuffer* buffer, u32 size){
     delete[] clone;
 }
 
-void gapMoveCursor(GapBuffer* buffer, u32 position){
-    if(position < 0 && position <= buffer->size){
+void gapMoveCursor(GapBuffer* buffer, i32 position){
+    if(position < 0 || position > buffer->size - 1){
         return;
-    }
-
-    if(position > buffer->gap.start && position <= buffer->gap.end){
-        position = buffer->gap.end;
     }
 
     buffer->cursor = position;
 }
 
-void gapMoveGap(GapBuffer* buffer, u32 position){
+void gapMoveGap(GapBuffer* buffer, i32 position){
     if(position == buffer->gap.start){
         return;
     }
-
-
+    
     if(position < buffer->gap.start){
         u32 shiftAmount = buffer->gap.start - position;
         while(shiftAmount--){
@@ -125,17 +121,19 @@ void gapShrinkGap(GapBuffer* buffer){
 
 void gapExtendGap(GapBuffer* buffer){
     --buffer->gap.start;
-    buffer->gap.start = clamp(buffer->gap.start, 0, buffer->size - gapGetGapSize(buffer) + 1);
+    buffer->gap.start = clamp(buffer->gap.start, 0, buffer->size - 1);
 }
 
 void gapExtendGapBackwards(GapBuffer* buffer){
     ++buffer->gap.end;
-    buffer->gap.end = clamp(buffer->gap.end, 0, buffer->size - gapGetGapSize(buffer) - 1);
+    buffer->gap.end = clamp(buffer->gap.end, 0, buffer->size - 1);
 }
 
-void gapInsertCharacterAt(GapBuffer* buffer, char character, u32 position){
+void gapInsertCharacterAt(GapBuffer* buffer, char character, i32 position){
     buffer->dirty = true;
-
+    if(position > buffer->size - 1){
+        gapGrowGap(buffer, GAP_DEFAULT_SIZE);
+    }
     gapMoveGap(buffer, UserToGap(buffer->gap, position));
 
     gapReplaceCharacterAt(buffer, character, buffer->gap.start);
@@ -146,13 +144,13 @@ void gapInsertCharacterAt(GapBuffer* buffer, char character, u32 position){
     }
 }
 
-void gapRemoveCharacterNearAt(GapBuffer* buffer, u32 position){
+void gapRemoveCharacterNearAt(GapBuffer* buffer, i32 position){
     buffer->dirty = true;
     gapMoveGap(buffer, UserToGap(buffer->gap, position));
     gapExtendGapBackwards(buffer); // basically ++gap.end
 }
 
-void gapRemoveCharacterAt(GapBuffer* buffer, u32 position){
+void gapRemoveCharacterAt(GapBuffer* buffer, i32 position){
     buffer->dirty = true;
     gapMoveGap(buffer, UserToGap(buffer->gap, position));
     gapExtendGap(buffer); // basically --gap.start
@@ -164,17 +162,17 @@ bool gapCursorInGap(GapBuffer* buffer){
 
 void gapIncreaseCursor(GapBuffer* buffer){
     ++buffer->cursor;
-    buffer->cursor = clamp(buffer->cursor, 0, buffer->size - gapGetGapSize(buffer));
+    // buffer->cursor = clamp(buffer->cursor, 0, buffer->size - 1);
 }
 
 void gapDecreaseCursor(GapBuffer* buffer){
     --buffer->cursor;
-    buffer->cursor = clamp(buffer->cursor, 0, buffer->size - gapGetGapSize(buffer));
+    // buffer->cursor = clamp(buffer->cursor, 0, buffer->size - 1);
 }
 
 void gapSeekCursor(GapBuffer* buffer, i32 distance){
     buffer->cursor += distance;
-    buffer->cursor = clamp(buffer->cursor, 0, buffer->size - gapGetGapSize(buffer));
+    buffer->cursor = clamp(buffer->cursor, 0, buffer->size - 1);
 }
 
 i32 gapGetDistanceToNewline(GapBuffer* buffer){
@@ -185,67 +183,72 @@ i32 gapGetDistanceToNewline(GapBuffer* buffer){
     // just let this here for now..
     while(buffer->data[convertedCursor] != '\n' &&
           buffer->data[convertedCursor] != '\0'){
-        ++clone;
-        convertedCursor = UserToGap(buffer->gap, buffer->cursor);
-        if(convertedCursor >= buffer->size - 1){
+        convertedCursor = UserToGap(buffer->gap, ++clone);
+        if(convertedCursor < 0 || convertedCursor > buffer->size - 1){
             break;
         }
     }
+    clone = clamp(clone, 0, buffer->size - 1);
     return (clone - buffer->cursor);
 }
 
 i32 gapGetDistanceFromPreviousNewline(GapBuffer* buffer){
     i32 clone = buffer->cursor;
     i32 convertedCursor = UserToGap(buffer->gap, buffer->cursor);
+    if(convertedCursor < 0 || convertedCursor > buffer->size - 1){
+        clone = clamp(clone, 0, buffer->size - 1);
+        return (buffer->cursor - clone);
+    }
 
     while(buffer->data[convertedCursor] != '\n'){
-        --clone;
-        convertedCursor = UserToGap(buffer->gap, clone);
-        if(convertedCursor < 0){
+        convertedCursor = UserToGap(buffer->gap, --clone);
+        if(convertedCursor < 0 || convertedCursor > buffer->size - 1){
             break;
         }
     }
+
+    clone = clamp(clone, 0, buffer->size - 1);
     return (buffer->cursor - clone);
 }
 
 void gapSeekCursorToPreviousTabOrNewline(GapBuffer* buffer){
-    --buffer->cursor;
+    gapDecreaseCursor(buffer);
     i32 convertedCursor = UserToGap(buffer->gap, buffer->cursor);
 
     while(buffer->data[convertedCursor] != '\t' &&
           buffer->data[convertedCursor] != '\n'){
-        --buffer->cursor;
+        gapDecreaseCursor(buffer);
         convertedCursor = UserToGap(buffer->gap, buffer->cursor);
-        if(convertedCursor <= 0 || convertedCursor >= buffer->size - 1){
+        if(convertedCursor < 0 || convertedCursor > buffer->size - 1){
             break;
         }
     }
-    buffer->cursor = clamp(buffer->cursor, 0, buffer->size - gapGetGapSize(buffer));
+    buffer->cursor = clamp(buffer->cursor, 0, buffer->size - 1);
 }
 
 void gapSeekCursorToPreviousNewline(GapBuffer* buffer){
-    --buffer->cursor;
+    gapDecreaseCursor(buffer);
     i32 convertedCursor = UserToGap(buffer->gap, buffer->cursor);
-    if(convertedCursor <= 0 || convertedCursor >= buffer->size - 1){
-        buffer->cursor = clamp(buffer->cursor, 0, buffer->size - gapGetGapSize(buffer));
+    if(convertedCursor < 0 || convertedCursor > buffer->size - 1){
+        buffer->cursor = clamp(buffer->cursor, 0, buffer->size - 1);
         return;
     }
 
     while(buffer->data[convertedCursor] != '\n'){
-        --buffer->cursor;
+        gapDecreaseCursor(buffer);
         convertedCursor = UserToGap(buffer->gap, buffer->cursor);
-        if(convertedCursor <= 0 || convertedCursor >= buffer->size - 1){
+        if(convertedCursor <= 0 || convertedCursor > buffer->size - 1){
             break;
         }
     }
-    buffer->cursor = clamp(buffer->cursor, 0, buffer->size - gapGetGapSize(buffer));
+    buffer->cursor = clamp(buffer->cursor, 0, buffer->size - 1);
 }
 
 i32 gapGetAmontOfTabsBeforeCursor(GapBuffer* buffer){
     i32 result = 0;
+
     i32 clone = buffer->cursor;
-    --clone;
-    i32 convertedCursor = UserToGap(buffer->gap, clone);
+    i32 convertedCursor = UserToGap(buffer->gap, --clone);
 
     while(buffer->data[convertedCursor] != '\n'){
         if(buffer->data[convertedCursor] == '\t'){
@@ -254,7 +257,7 @@ i32 gapGetAmontOfTabsBeforeCursor(GapBuffer* buffer){
 
         --clone;
         convertedCursor = UserToGap(buffer->gap, clone);
-        if(convertedCursor <= 0 || convertedCursor >= buffer->size - 1){
+        if(convertedCursor < 0 || convertedCursor > buffer->size - 1){
             break;
         }
     }
@@ -263,10 +266,10 @@ i32 gapGetAmontOfTabsBeforeCursor(GapBuffer* buffer){
 }
 
 void gapSeekCursorToNewline(GapBuffer* buffer){
-    ++buffer->cursor;
+	gapIncreaseCursor(buffer);
     i32 convertedCursor = UserToGap(buffer->gap, buffer->cursor);
-    if(convertedCursor >= buffer->size - 1){
-        buffer->cursor = clamp(buffer->cursor, 0, buffer->size - gapGetGapSize(buffer));
+    if(convertedCursor < 0 || convertedCursor > buffer->size - 1){
+        buffer->cursor = clamp(buffer->cursor, 0, buffer->size - 1);
         return;
     }
 
@@ -274,16 +277,16 @@ void gapSeekCursorToNewline(GapBuffer* buffer){
     // just let this here for now..
     while(buffer->data[convertedCursor] != '\n' &&
           buffer->data[convertedCursor] != '\0'){
-        ++buffer->cursor;
+        gapIncreaseCursor(buffer);
         convertedCursor = UserToGap(buffer->gap, buffer->cursor);
-        if(convertedCursor >= buffer->size - 1){
+        if(convertedCursor < 0 || convertedCursor > buffer->size - 1){
             break;
         }
     }
-    buffer->cursor = clamp(buffer->cursor, 0, buffer->size - gapGetGapSize(buffer));
+    buffer->cursor = clamp(buffer->cursor, 0, buffer->size - 1);
 }
 
-void gapSeekCursorToLine(GapBuffer* buffer, u32 line){
+void gapSeekCursorToLine(GapBuffer* buffer, i32 line){
     // solution before line chaching
     u32 seekLocation = 0;
     for(int i = 0; i < buffer->size && line; ++i){
@@ -297,25 +300,24 @@ void gapSeekCursorToLine(GapBuffer* buffer, u32 line){
     }
 
     buffer->cursor = seekLocation - 1;
-    buffer->cursor = clamp(buffer->cursor, 0, buffer->size - gapGetGapSize(buffer));
+    buffer->cursor = clamp(buffer->cursor, 0, buffer->size - 1);
 }
 
 i32 gapGetConsecutiveSpaces(GapBuffer* buffer){
     i32 clone = buffer->cursor;
 
-    ++clone;
-    i32 convertedCursor = UserToGap(buffer->gap, clone);
+    i32 convertedCursor = UserToGap(buffer->gap, clone + 1);
 
     // TODO(Sarmis) since the end of the buffer might me bagic
     // just let this here for now..
     while((buffer->data[convertedCursor] == ' '  ||
           buffer->data[convertedCursor] == '\t') &&
           buffer->data[convertedCursor] != '\0'){
-        ++clone;
-        if(clone == buffer->size){
+        convertedCursor = UserToGap(buffer->gap, clone + 1);
+        if(convertedCursor < 0 && convertedCursor > buffer->size - 1){
             break;
         }
-        convertedCursor = UserToGap(buffer->gap, clone);
+        ++clone;
     }
     return (clone - buffer->cursor);
 }
@@ -323,20 +325,26 @@ i32 gapGetConsecutiveSpaces(GapBuffer* buffer){
 i32 gapGetPreviousConsecutiveSpaces(GapBuffer* buffer){
     i32 clone = buffer->cursor;
 
+    i32 convertedCursor = UserToGap(buffer->gap, clone - 1);
+    if(convertedCursor < 0 || convertedCursor > buffer->size - 1){
+        clone = clamp(clone, 0, buffer->size - 1);
+        return (buffer->cursor - clone);
+    }
     --clone;
-    i32 convertedCursor = UserToGap(buffer->gap, clone);
 
     // TODO(Sarmis) since the end of the buffer might me bagic
     // just let this here for now..
     while((buffer->data[convertedCursor] == ' '  ||
           buffer->data[convertedCursor] == '\t') &&
           buffer->data[convertedCursor] != '\0'){
-        --clone;
-        if(clone < 0){
+        convertedCursor = UserToGap(buffer->gap, clone - 1);
+        if(convertedCursor < 0 || convertedCursor > buffer->size - 1){
             break;
         }
-        convertedCursor = UserToGap(buffer->gap, clone);
+        --clone;
     }
+
+    clone = clamp(clone, 0, buffer->size - 1);
     return (buffer->cursor - clone);
 }
 
@@ -346,86 +354,74 @@ void gapSeekCursorToCapitalOrSpace(GapBuffer* buffer){
         buffer->cursor += possibleSkip;
         return;
     }
-    ++buffer->cursor;
+
+    gapIncreaseCursor(buffer);
     i32 convertedCursor = UserToGap(buffer->gap, buffer->cursor);
+    if(convertedCursor < 0 || convertedCursor > buffer->size - 1){
+        buffer->cursor = clamp(buffer->cursor, 0, buffer->size - 1);
+        return;
+    }
 
     // TODO(Sarmis) since the end of the buffer might me bagic
     // just let this here for now..
-    while(buffer->data[convertedCursor] != '\n' &&
-          buffer->data[convertedCursor] != '"' &&
-          buffer->data[convertedCursor] != ' ' &&
-          buffer->data[convertedCursor] != '!' &&
-          buffer->data[convertedCursor] != '@' &&
-          buffer->data[convertedCursor] != '#' &&
-          buffer->data[convertedCursor] != '$' &&
-          buffer->data[convertedCursor] != '%' &&
-          buffer->data[convertedCursor] != '^' &&
-          buffer->data[convertedCursor] != '&' &&
-          buffer->data[convertedCursor] != '*' &&
-          buffer->data[convertedCursor] != '(' &&
-          buffer->data[convertedCursor] != '}' &&
-          buffer->data[convertedCursor] != '[' &&
-          buffer->data[convertedCursor] != ']' &&
-          buffer->data[convertedCursor] != '<' &&
-          buffer->data[convertedCursor] != '>' &&
-          buffer->data[convertedCursor] != '.' &&
-          buffer->data[convertedCursor] != ',' &&
-          buffer->data[convertedCursor] != '/' &&
-          buffer->data[convertedCursor] != '?' &&
-          buffer->data[convertedCursor] != '\\' &&
+    while(buffer->data[convertedCursor] != '\n' && buffer->data[convertedCursor] != '"' &&
+          buffer->data[convertedCursor] != ' ' && buffer->data[convertedCursor] != '!' &&
+          buffer->data[convertedCursor] != '@' && buffer->data[convertedCursor] != '#' &&
+          buffer->data[convertedCursor] != '$' && buffer->data[convertedCursor] != '%' &&
+          buffer->data[convertedCursor] != '^' && buffer->data[convertedCursor] != '&' &&
+          buffer->data[convertedCursor] != '*' && buffer->data[convertedCursor] != '(' &&
+          buffer->data[convertedCursor] != '}' && buffer->data[convertedCursor] != '[' &&
+          buffer->data[convertedCursor] != ']' && buffer->data[convertedCursor] != '<' &&
+          buffer->data[convertedCursor] != '>' && buffer->data[convertedCursor] != '.' &&
+          buffer->data[convertedCursor] != ',' && buffer->data[convertedCursor] != '/' &&
+          buffer->data[convertedCursor] != '?' && buffer->data[convertedCursor] != '\\' &&
           !(buffer->data[convertedCursor] >= 'A' && buffer->data[convertedCursor] <= 'Z') &&
           buffer->data[convertedCursor] != '\0'){
-        ++buffer->cursor;
-        if(buffer->cursor == buffer->size){
+        gapIncreaseCursor(buffer);
+        convertedCursor = UserToGap(buffer->gap, buffer->cursor);
+        if(convertedCursor < 0 || convertedCursor > buffer->size - 1){
             break;
         }
-        convertedCursor = UserToGap(buffer->gap, buffer->cursor);
     }
-    buffer->cursor = clamp(buffer->cursor, 0, buffer->size - gapGetGapSize(buffer));
+    buffer->cursor = clamp(buffer->cursor, 0, buffer->size - 1);
 }
 
 void gapSeekCursorToPreviousCapitalOrSpace(GapBuffer* buffer){
     i32 possibleSkip = gapGetPreviousConsecutiveSpaces(buffer);
     if(possibleSkip > 1){
-        buffer->cursor -= possibleSkip;
+        gapSeekCursor(buffer, -possibleSkip);
         return;
     }
-    --buffer->cursor;
+    
+    gapDecreaseCursor(buffer);
     i32 convertedCursor = UserToGap(buffer->gap, buffer->cursor);
+    if(convertedCursor < 0 || convertedCursor > buffer->size - 1){
+        buffer->cursor = clamp(buffer->cursor, 0, buffer->size - 1);
+        return;
+    }
     // Ok for real I will make a function to see if its a symbol instead
     // of untolling it
-    while(buffer->data[convertedCursor] != '\n' &&
-          buffer->data[convertedCursor] != '"' &&
-          buffer->data[convertedCursor] != ' ' &&
-          buffer->data[convertedCursor] != '#' &&
-          buffer->data[convertedCursor] != '!' &&
-          buffer->data[convertedCursor] != '@' &&
-          buffer->data[convertedCursor] != '#' &&
-          buffer->data[convertedCursor] != '$' &&
-          buffer->data[convertedCursor] != '%' &&
-          buffer->data[convertedCursor] != '^' &&
-          buffer->data[convertedCursor] != '&' &&
-          buffer->data[convertedCursor] != '*' &&
-          buffer->data[convertedCursor] != '(' &&
-          buffer->data[convertedCursor] != '}' &&
-          buffer->data[convertedCursor] != '[' &&
-          buffer->data[convertedCursor] != ']' &&
-          buffer->data[convertedCursor] != '<' &&
-          buffer->data[convertedCursor] != '>' &&
-          buffer->data[convertedCursor] != '.' &&
-          buffer->data[convertedCursor] != ',' &&
-          buffer->data[convertedCursor] != '/' &&
-          buffer->data[convertedCursor] != '?' &&
+    while(buffer->data[convertedCursor] != '\n' && buffer->data[convertedCursor] != '"' &&
+          buffer->data[convertedCursor] != ' ' && buffer->data[convertedCursor] != '#' &&
+          buffer->data[convertedCursor] != '!' && buffer->data[convertedCursor] != '@' &&
+          buffer->data[convertedCursor] != '#' && buffer->data[convertedCursor] != '$' &&
+          buffer->data[convertedCursor] != '%' && buffer->data[convertedCursor] != '^' &&
+          buffer->data[convertedCursor] != '&' && buffer->data[convertedCursor] != '*' &&
+          buffer->data[convertedCursor] != '(' && buffer->data[convertedCursor] != '}' &&
+          buffer->data[convertedCursor] != '[' && buffer->data[convertedCursor] != ']' &&
+          buffer->data[convertedCursor] != '<' && buffer->data[convertedCursor] != '>' &&
+          buffer->data[convertedCursor] != '.' && buffer->data[convertedCursor] != ',' &&
+          buffer->data[convertedCursor] != '/' && buffer->data[convertedCursor] != '?' &&
           buffer->data[convertedCursor] != '\\' &&
           !(buffer->data[convertedCursor] >= 'A' && buffer->data[convertedCursor] <= 'Z') &&
           buffer->data[convertedCursor] != '\0'){
-        --buffer->cursor;
-        if(buffer->cursor == 0){
+        gapDecreaseCursor(buffer);
+        convertedCursor = UserToGap(buffer->gap, buffer->cursor);
+        if(convertedCursor < 0 || convertedCursor > buffer->size - 1){
             break;
         }
-        convertedCursor = UserToGap(buffer->gap, buffer->cursor);
     }
-    buffer->cursor = clamp(buffer->cursor, 0, buffer->size - gapGetGapSize(buffer));
+    buffer->cursor = clamp(buffer->cursor, 0, buffer->size - 1);
 }
 
 i32 gapGetSelectionSize(GapBuffer* buffer){
@@ -447,12 +443,20 @@ void gapSeekCursorINewlinesIfPossible(GapBuffer* buffer, i32 amount){
 i32 gapRemoveCharactersInRange(GapBuffer* buffer, i32 start, i32 end){
     buffer->dirty = true;
     
-    start = clamp(start, 0, buffer->size - gapGetGapSize(buffer));
-    end = clamp(end, 0, buffer->size - gapGetGapSize(buffer));
+    start = UserToGap(buffer->gap, start);
+    end = UserToGap(buffer->gap, end);
+
+    if(start < 0){
+        start = 0;
+    }
+
     i32 distance = end - start;
 
     while(distance--){
         gapRemoveCharacterAt(buffer, end--);
+        if(end < 0){
+            break;
+        }
     }
     return (end - start);
 }
@@ -550,3 +554,27 @@ char* gapToString(GapBuffer* buffer){
     result[offset] = 0;
     return result;
 }
+
+void gapSeekCursorToMatch(GapBuffer* buffer, const char* match){
+    // implement boyer moore in the future probably
+    for(int i = buffer->cursor + 1; i < buffer->size - 1; ++i){
+        bool matching = true;
+        i32 convertedCoordinate = UserToGap(buffer->gap, i);
+        for(int ii = 0; ii < strlen(match); ++ii){
+            if(convertedCoordinate + ii > buffer->size - 1){
+                break;
+            }
+            if(buffer->data[convertedCoordinate + ii] != match[ii]){
+                matching = false;
+                break;
+            }
+        }
+        if(matching){
+            buffer->cursor = i;
+            break;
+        }
+    }
+}
+
+
+
