@@ -8,36 +8,44 @@
 #include "panel.h"
 #include "window.h"
 #include "gap_buffer.h"
+#include "app.h"
 
 static KeyboardBindingManager layoutManagerKeybindings;
 
-void layoutKeyActionOpenFilePanel(void* data0, void* data1){
-    printf("asd\n");
-    PanelGroup* panelGroup = (PanelGroup*) data0;
-    EditorWindow* currentWindow = (EditorWindow*) data1;
+void layoutKeyActionChangeCurrentWindowToNext(void* data){
+    ApplicationLayoutData* applicationLayoutData = (ApplicationLayoutData*) data;
 
-    if(panelGroup->panel.active){
-        gapClean(&panelGroup->panel.buffer);
+    applicationLayoutData->currentWindowIndex++;
+    applicationLayoutData->currentWindowIndex %= applicationLayoutData->windowCount;
+    applicationLayoutData->currentWindow = &applicationLayoutData->windows[applicationLayoutData->currentWindowIndex];
+}
+
+void layoutKeyActionOpenFilePanel(void* data){
+    ApplicationLayoutData* applicationLayoutData = (ApplicationLayoutData*) data;
+
+    if(applicationLayoutData->panelGroup.panel.active){
+        gapClean(&applicationLayoutData->panelGroup.panel.buffer);
     }
 
     // TODO(Sarmis) put this into a routine of its own
-    panelGroup->panel = panelGroup->openFilePanel;
-    panelGroup->panel.active = true;
-    panelGroup->panel.buffer = gapCreateEmpty();
-    panelGroup->panel.position.x = currentWindow->left;
-    panelGroup->panel.position.y = -panelGroup->panel.size.y;
+    applicationLayoutData->panelGroup.panel = applicationLayoutData->panelGroup.openFilePanel;
+    applicationLayoutData->panelGroup.panel.active = true;
+    applicationLayoutData->panelGroup.panel.buffer = gapCreateEmpty();
+    applicationLayoutData->panelGroup.panel.position.x = applicationLayoutData->currentWindow->left;
+    applicationLayoutData->panelGroup.panel.position.y = -applicationLayoutData->panelGroup.panel.size.y;
 }
 
 // TODO(Sarmis) parameters will change, probably one struct with stuff thats needed
-void layoutManagerTick(PanelGroup* panelGroup, EditorWindow* currentWindow, KeyboardManager* keyboardManager){
+void layoutManagerTick(ApplicationLayoutData* applicationLayoutData, KeyboardManager* keyboardManager){
     KeyboardBinding binding = keyBindingGetBindingByKey(&layoutManagerKeybindings, keyboardManager->currentActiveKeyStroke);
     if(!binding.key){
         return;
     }
 
-    binding.keyAction2(panelGroup, currentWindow);
+    binding.keyAction1(applicationLayoutData);
 }
 
 void layoutKeyBindingInitialize(KeyboardBindingManager* keyboardBindingManager){
-    keyBindingAddEntry2(keyboardBindingManager, KEY_CTRL | 'p', layoutKeyActionOpenFilePanel);
+    keyBindingAddEntry1(keyboardBindingManager, KEY_CTRL | 'p', layoutKeyActionOpenFilePanel);
+    keyBindingAddEntry1(keyboardBindingManager, KEY_CTRL | KEY_TAB, layoutKeyActionChangeCurrentWindowToNext);
 }

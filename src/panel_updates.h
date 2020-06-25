@@ -70,4 +70,6 @@ bool openFileTick(void* data0, void* data1, void* data2){
         bufferClean(&panel->suggestions);
         panel->suggestions = openFilePanelGenerateSuggestions(&panel->buffer);
     }
+    
+    return true;
 }

@@ -12,7 +12,7 @@ void eventTick(bool* done, KeyboardManager* keyboardManager){
     SDL_Event event;
     // TODO(Sarmis) make a macro for the mask
     // that clears everything except the CTRL, SHIFT and ALT
-    keyboardManager->currentActiveKeyStroke = keyboardManager->currentActiveKeyStroke & ((~0) << 28);
+    keyboardManager->currentActiveKeyStroke = keyboardManager->currentActiveKeyStroke & ((~0) << 29);
     while(SDL_PollEvent(&event)){
         switch(event.type){
             case SDL_WINDOWEVENT: {
@@ -156,17 +156,11 @@ void eventTick(bool* done, KeyboardManager* keyboardManager){
 
                         case SDL_SCANCODE_TAB: {
                                 keyboardManager->currentActiveKeyStroke |= KEY_TAB;
-                                // NOTE(Sarmis) quitlely insert a tab character if the return 
-                                // key is pressed
-                                keyboardManager->currentActiveKeyStroke |= '\t';
                             }
                             break;
 
                         case SDL_SCANCODE_RETURN2: case SDL_SCANCODE_RETURN: {
                                 keyboardManager->currentActiveKeyStroke |= KEY_RETURN;
-                                // NOTE(Sarmis) quitlely insert a newline character if the return 
-                                // key is pressed
-                                keyboardManager->currentActiveKeyStroke |= '\n';
                             }
                             break;
 

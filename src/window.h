@@ -74,6 +74,12 @@ void editorWindowTick(EditorWindow* window, KeyboardManager* keyboardManager){
         } else if(isSpacingCharacter(potentialCharacter)){
             gapInsertCharacterAt(&window->buffer, potentialCharacter, window->buffer.cursor);
             gapIncreaseCursor(&window->buffer);
+        } else if(keyboardManager->currentActiveKeyStroke == KEY_TAB){ // ONLY TAB, no other key
+            gapInsertCharacterAt(&window->buffer, '\t', window->buffer.cursor);
+            gapIncreaseCursor(&window->buffer);
+        } else if(keyboardManager->currentActiveKeyStroke == KEY_RETURN){ // ONLY RETURN, no other key
+            gapInsertCharacterAt(&window->buffer, '\n', window->buffer.cursor);
+            gapIncreaseCursor(&window->buffer);
         }
     }
 

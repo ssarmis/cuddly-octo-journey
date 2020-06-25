@@ -16,25 +16,29 @@
 #include "layout_manager.h"
 #include "event_manager.h"
 
+#include "app.h"
+
 #include <time.h>
 
 #define TURBO_TIME 1
 
-u32 windowWidth = 1280;
-u32 windowHeight = 768;
-
-u32 windowCount = 2;
-EditorWindow windows[2] = {
-    windowCreate(windowWidth / 2, windowHeight, 0, 0),
-    windowCreate(windowWidth / 2, windowHeight, windowWidth / 2, 0)
-};
-
-u32 currentWindowIndex = 0;
-EditorWindow* currentWindow = &windows[currentWindowIndex];
-GapBuffer* currentBuffer = &currentWindow->buffer;
+ApplicationLayoutData applicationLayoutData = {};
 
 int main(int argumentCount, char* arguments[]){
-#if 1
+
+    applicationLayoutData.windowWidth = 1280;
+    applicationLayoutData.windowHeight = 768;
+
+    applicationLayoutData.windowCount = 2;
+    applicationLayoutData.windows[0] = windowCreate(applicationLayoutData.windowWidth / 2,
+                                                    applicationLayoutData.windowHeight, 0, 0);
+    applicationLayoutData.windows[1] = windowCreate(applicationLayoutData.windowWidth / 2,
+                                                    applicationLayoutData.windowHeight, applicationLayoutData.windowWidth / 2, 0);
+
+    applicationLayoutData.currentWindowIndex = 0;
+    applicationLayoutData.currentWindow = &applicationLayoutData.windows[0];
+    applicationLayoutData.currentBuffer = &applicationLayoutData.currentWindow->buffer;
+
     if(SDL_Init(SDL_INIT_EVERYTHING) < 0){
         TRACE("Could not initialize SDL2\n");
         return 1;
@@ -52,7 +56,7 @@ int main(int argumentCount, char* arguments[]){
 
     SDL_Window *window = SDL_CreateWindow("App",
                                           SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED,
-                                          windowWidth, windowHeight,
+                                          applicationLayoutData.windowWidth, applicationLayoutData.windowHeight,
                                           SDL_WINDOW_OPENGL | SDL_WINDOW_RESIZABLE);
     SDL_GLContext glcontext = SDL_GL_CreateContext(window);
 
@@ -75,19 +79,16 @@ int main(int argumentCount, char* arguments[]){
 
     SHADER_SCOPE(shader.programId, {
         shaderSetUniform4m(shader.locations.matrixPerspective, 
-                           orthographic(0, windowWidth, 0, windowHeight));
+                           orthographic(0, applicationLayoutData.windowWidth, 0, applicationLayoutData.windowHeight));
     });
 
     SHADER_SCOPE(shaderUI.programId, {
         shaderSetUniform4m(shaderUI.locations.matrixPerspective, 
-                           orthographic(0, windowWidth, 0, windowHeight));
+                           orthographic(0, applicationLayoutData.windowWidth, 0, applicationLayoutData.windowHeight));
     });
 
     bool done = false;
 
-    u32 backspaceTime = 0;
-    u32 arrowTime = 0;
-#endif
 
     // GapBuffer buffer = {};
     // buffer.data = new u8[GAP_DEFAULT_SIZE];
@@ -98,26 +99,24 @@ int main(int argumentCount, char* arguments[]){
     // buffer.gap.end = GAP_DEFAULT_SIZE;
 
     if(argumentCount > 1){
-        currentWindow->buffer = gapReadFile(arguments[1]);
+        applicationLayoutData.currentWindow->buffer = gapReadFile(arguments[1]);
     } else {
-        currentWindow->buffer = gapCreateEmpty();
+        applicationLayoutData.currentWindow->buffer = gapCreateEmpty();
     }
 
-    PanelGroup panelGroup = {};
-
     // TODO(Sarmis) make initialization for these
-    panelGroup.openFilePanel = panelCreate({0, 0, 0}, {400, FONT_HEIGHT * 3 + 12 + 4}, "Open file");
-    panelGroup.openFilePanel.action = openFileAction;
-    panelGroup.openFilePanel.tick = openFileTick;
+    applicationLayoutData.panelGroup.openFilePanel = panelCreate({0, 0, 0}, {400, FONT_HEIGHT * 3 + 12 + 4}, "Open file");
+    applicationLayoutData.panelGroup.openFilePanel.action = openFileAction;
+    applicationLayoutData.panelGroup.openFilePanel.tick = openFileTick;
 
-    panelGroup.findPanel = panelCreate({0, 0, 0}, {400, FONT_HEIGHT * 3 + 12 + 4}, "Find");
-    panelGroup.findPanel.action = findAction;
+    applicationLayoutData.panelGroup.findPanel = panelCreate({0, 0, 0}, {400, FONT_HEIGHT * 3 + 12 + 4}, "Find");
+    applicationLayoutData.panelGroup.findPanel.action = findAction;
 
-    panelGroup.gotoLinePanel = panelCreate({0, 0, 0}, {400, FONT_HEIGHT * 3 + 12 + 4}, "Goto line");
-    panelGroup.gotoLinePanel.action = gotoLineAction;
+    applicationLayoutData.panelGroup.gotoLinePanel = panelCreate({0, 0, 0}, {400, FONT_HEIGHT * 3 + 12 + 4}, "Goto line");
+    applicationLayoutData.panelGroup.gotoLinePanel.action = gotoLineAction;
 
-    panelGroup.saveFilePanel = panelCreate({0, 0, 0}, {400, FONT_HEIGHT * 3 + 12 + 4}, "Save file");
-    panelGroup.saveFilePanel.action = saveFileAction;
+    applicationLayoutData.panelGroup.saveFilePanel = panelCreate({0, 0, 0}, {400, FONT_HEIGHT * 3 + 12 + 4}, "Save file");
+    applicationLayoutData.panelGroup.saveFilePanel.action = saveFileAction;
 
 #if 1
     KeyboardManager keyboardManager = {};
@@ -163,11 +162,16 @@ int main(int argumentCount, char* arguments[]){
 
         // TODO(Sarmis) make something to hold this "done"
         eventTick(&done, &keyboardManager);
-        layoutManagerTick(&panelGroup, currentWindow, &keyboardManager);
+
+        // printf("%x\n", keyboardManager.currentActiveKeyStroke);
+        // if(keyboardManager.currentActiveKeyStroke == (KEY_CTRL | KEY_TAB)){
+        // }
+
+        layoutManagerTick(&applicationLayoutData, &keyboardManager);
 
         v2 uvs[4] = {};
 
-        glViewport(0, 0, windowWidth, windowHeight);
+        glViewport(0, 0, applicationLayoutData.windowWidth, applicationLayoutData.windowHeight);
 
         glClearColor(DEFAULT_COLOR_BACKGROUND.x, DEFAULT_COLOR_BACKGROUND.y, DEFAULT_COLOR_BACKGROUND.z, 1);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
@@ -179,24 +183,25 @@ int main(int argumentCount, char* arguments[]){
         // or just tick the panels first and consume the keystroke if
         // it was used in a tick
 
-        for(int i = 0; i < windowCount; ++i){
-            if(i == currentWindowIndex && !panelGroup.panel.active){
-                editorWindowTick(&windows[i], &keyboardManager);
+        for(int i = 0; i < applicationLayoutData.windowCount; ++i){
+            if(i == applicationLayoutData.currentWindowIndex && !applicationLayoutData.panelGroup.panel.active){
+                editorWindowTick(&applicationLayoutData.windows[i], &keyboardManager);
             }
-            editorWindowRender(&windows[i], 
+            editorWindowRender(&applicationLayoutData.windows[i], 
                         &shader, &shaderUI,
                         &renderBuffer, &renderBufferUI, &renderBufferBackground,
                         &font,
-                        time, currentWindowIndex == i);
+                        time, applicationLayoutData.currentWindowIndex == i);
         }
         
-        if(panelGroup.panel.active){
-            panelGroup.panel.tick(&panelGroup.panel, currentWindow, &keyboardManager);
-            panelRender(&panelGroup.panel, currentWindow,
+        if(applicationLayoutData.panelGroup.panel.active){
+            applicationLayoutData.panelGroup.panel.tick(&applicationLayoutData.panelGroup.panel,
+                                                        applicationLayoutData.currentWindow, &keyboardManager);
+            panelRender(&applicationLayoutData.panelGroup.panel, applicationLayoutData.currentWindow,
                  &shader, &shaderUI,
                  &renderBuffer, &renderBufferUI, &renderBufferBackground,
                  &font,
-                 time, windowWidth, windowHeight);
+                 time, applicationLayoutData.windowWidth, applicationLayoutData.windowHeight);
         }
         
         SDL_GL_SwapWindow(window);
