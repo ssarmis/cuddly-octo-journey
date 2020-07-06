@@ -7,6 +7,8 @@
 #include "panel_updates.h"
 
 struct ApplicationLayoutData {
+    bool scheduleChangeInSize;
+    
     u32 windowWidth;
     u32 windowHeight;
 

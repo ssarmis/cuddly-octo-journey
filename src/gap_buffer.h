@@ -119,9 +119,13 @@ void gapShrinkGap(GapBuffer* buffer){
     }
 }
 
-void gapExtendGap(GapBuffer* buffer){
-    --buffer->gap.start;
+void gapExtendGap(GapBuffer* buffer, i32 amount){
+    buffer->gap.start -= amount;
     buffer->gap.start = clamp(buffer->gap.start, 0, buffer->size - 1);
+}
+
+void gapExtendGap(GapBuffer* buffer){
+    gapExtendGap(buffer, 1);
 }
 
 void gapExtendGapBackwards(GapBuffer* buffer){
@@ -154,6 +158,10 @@ void gapRemoveCharacterAt(GapBuffer* buffer, i32 position){
     buffer->dirty = true;
     gapMoveGap(buffer, UserToGap(buffer->gap, position));
     gapExtendGap(buffer); // basically --gap.start
+}
+
+bool gapPointInGap(GapBuffer* buffer, i32 point){
+    return (point >= buffer->gap.start && point < buffer->gap.end);
 }
 
 bool gapCursorInGap(GapBuffer* buffer){
@@ -445,8 +453,8 @@ void gapSeekCursorINewlinesIfPossible(GapBuffer* buffer, i32 amount){
 i32 gapRemoveCharactersInRange(GapBuffer* buffer, i32 start, i32 end){
     buffer->dirty = true;
     
-    start = UserToGap(buffer->gap, start);
-    end = UserToGap(buffer->gap, end);
+    // start = UserToGap(buffer->gap, start);
+    i32 convertedEnd = UserToGap(buffer->gap, end);
 
     if(start < 0){
         start = 0;
@@ -454,12 +462,9 @@ i32 gapRemoveCharactersInRange(GapBuffer* buffer, i32 start, i32 end){
 
     i32 distance = end - start;
 
-    while(distance--){
-        gapRemoveCharacterAt(buffer, end--);
-        if(end < 0){
-            break;
-        }
-    }
+    gapMoveGap(buffer, convertedEnd);
+    gapExtendGap(buffer, distance);
+
     return (end - start);
 }
 

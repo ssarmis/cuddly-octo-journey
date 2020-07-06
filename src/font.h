@@ -90,30 +90,43 @@ void fontRenderGapBufferNoHighlights(v2 position, GapBuffer* buffer, RenderBuffe
     glBindBuffer(GL_ARRAY_BUFFER, 0);
 
     v2 uvs[4] = {};
-    
-    // TODO(Sarmis) not proud of this...will change...
-    for(int i = 0; i < buffer->size; ++i){
-        if(i >= buffer->gap.start && i < buffer->gap.end){
-            continue;
-        }
 
-        char character = buffer->data[i];
-        i32 glyphIndex = character - ' ';
-        Glyph glyph = font->glyphs[glyphIndex];
-       
-        if(character == '\n'){
-            selectionCursor.x = position.x;
-            selectionCursor.y += FONT_HEIGHT;
-        } else if(character == '\t'){
-            selectionCursor.x += FONT_HEIGHT * 2;
+    i32 selectionSize = gapGetSelectionSize(buffer);
+    if(selectionSize){
+        // TODO(Sarmis) not proud of this...will change...
+        i32 selectionBeggining;
+        i32 selectionEnding;
+        if(selectionSize > 0){
+            selectionBeggining = UserToGap(buffer->gap, buffer->selection.start);
+            selectionEnding = UserToGap(buffer->gap, buffer->selection.end);
         } else {
-            if(i >= UserToGap(buffer->gap, buffer->selection.start) &&
-                i < UserToGap(buffer->gap, buffer->selection.end)){
-                pushQuad(renderBufferUI, v3(selectionCursor.x, selectionCursor.y + 3, 0), 
-                        v2(FONT_HEIGHT / 2, FONT_HEIGHT + 3), uvs, SELECTION_COLOR_TEXT);
+            selectionBeggining = UserToGap(buffer->gap, buffer->selection.end);
+            selectionEnding = UserToGap(buffer->gap, buffer->selection.start);
+        }
+        
+        for(int i = 0; i < buffer->size; ++i){
+            if(i >= buffer->gap.start && i < buffer->gap.end){
+                continue;
             }
 
-            selectionCursor.x += (glyph.xadvance);
+            char character = buffer->data[i];
+            i32 glyphIndex = character - ' ';
+            Glyph glyph = font->glyphs[glyphIndex];
+        
+            if(character == '\n'){
+                selectionCursor.x = position.x;
+                selectionCursor.y += FONT_HEIGHT;
+            } else if(character == '\t'){
+                selectionCursor.x += FONT_HEIGHT * 2;
+            } else {
+                if(i >= selectionBeggining &&
+                    i < selectionEnding){
+                    pushQuad(renderBufferUI, v3(selectionCursor.x, selectionCursor.y + 3, 0), 
+                            v2(FONT_HEIGHT / 2, FONT_HEIGHT + 3), uvs, SELECTION_COLOR_TEXT);
+                }
+
+                selectionCursor.x += (glyph.xadvance);
+            }
         }
     }
 }
@@ -235,29 +248,42 @@ void fontRenderGapBuffer(v2 position, GapBuffer* buffer, RenderBuffer* renderBuf
 
     v2 uvs[4] = {};
     
-    // TODO(Sarmis) not proud of this...will change...
-    for(int i = 0; i < buffer->size; ++i){
-        if(i >= buffer->gap.start && i < buffer->gap.end){
-            continue;
-        }
-
-        char character = buffer->data[i];
-        i32 glyphIndex = character - ' ';
-        Glyph glyph = font->glyphs[glyphIndex];
-       
-        if(character == '\n'){
-            selectionCursor.x = position.x;
-            selectionCursor.y += FONT_HEIGHT;
-        } else if(character == '\t'){
-            selectionCursor.x += FONT_HEIGHT * 2;
+    i32 selectionSize = gapGetSelectionSize(buffer);
+    if(selectionSize){
+        // TODO(Sarmis) not proud of this...will change...
+        i32 selectionBeggining;
+        i32 selectionEnding;
+        if(selectionSize > 0){
+            selectionBeggining = UserToGap(buffer->gap, buffer->selection.start);
+            selectionEnding = UserToGap(buffer->gap, buffer->selection.end);
         } else {
-            if(i >= UserToGap(buffer->gap, buffer->selection.start) &&
-                i < UserToGap(buffer->gap, buffer->selection.end)){
-                pushQuad(renderBufferUI, v3(selectionCursor.x, selectionCursor.y + 3, 0), 
-                        v2(FONT_HEIGHT / 2, FONT_HEIGHT + 3), uvs, SELECTION_COLOR_TEXT);
+            selectionBeggining = UserToGap(buffer->gap, buffer->selection.end);
+            selectionEnding = UserToGap(buffer->gap, buffer->selection.start);
+        }
+        
+        for(int i = 0; i < buffer->size; ++i){
+            if(i >= buffer->gap.start && i < buffer->gap.end){
+                continue;
             }
 
-            selectionCursor.x += (glyph.xadvance);
+            char character = buffer->data[i];
+            i32 glyphIndex = character - ' ';
+            Glyph glyph = font->glyphs[glyphIndex];
+        
+            if(character == '\n'){
+                selectionCursor.x = position.x;
+                selectionCursor.y += FONT_HEIGHT;
+            } else if(character == '\t'){
+                selectionCursor.x += FONT_HEIGHT * 2;
+            } else {
+                if(i >= selectionBeggining &&
+                    i < selectionEnding){
+                    pushQuad(renderBufferUI, v3(selectionCursor.x, selectionCursor.y + 3, 0), 
+                            v2(FONT_HEIGHT / 2, FONT_HEIGHT + 3), uvs, SELECTION_COLOR_TEXT);
+                }
+
+                selectionCursor.x += (glyph.xadvance);
+            }
         }
     }
 }

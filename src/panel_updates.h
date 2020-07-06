@@ -2,6 +2,7 @@
 
 #include <unistd.h>
 #include <dirent.h>
+#include <string.h>
 
 #include "general.h"
 
@@ -42,6 +43,12 @@ Buffer<char*> openFilePanelGenerateSuggestions(GapBuffer* buffer){
         struct dirent* directoryEntry;
         while ((directoryEntry = readdir(directory)) != NULL) {
             if(stringIsPartiallyMatching((char*)filenameString.data, directoryEntry->d_name)){
+                
+                if(strlen(directoryEntry->d_name) > 48){
+                    directoryEntry->d_name[12] = 0;
+                }
+
+                // TODO(Sarmis) add Strings
                 bufferAppend<char*>(&result, directoryEntry->d_name);
             }
         }
@@ -69,7 +76,36 @@ bool openFileTick(void* data0, void* data1, void* data2){
         // actually clean so do something about that...
         bufferClean(&panel->suggestions);
         panel->suggestions = openFilePanelGenerateSuggestions(&panel->buffer);
+    } else if(keyboardManager->currentActiveKeyStroke & KEY_TAB){
+        if(panel->suggestions.currentAmount >= 1){
+            // not the best way, but I am too lazy to fix my gap buffer
+            // to not need to remake the buffer for this...
+            char* suggestion = panel->suggestions.array[0];
+            char* filename = gapToString(&panel->buffer);
+            String filenameString = cloneString(filename);
+            String directoryString;
+            directoryString.data = NULL;
+
+            u32 lastSlash = characterLastOccurence(filenameString, '/');
+            if(lastSlash){
+                directoryString = subString(filenameString, 0, lastSlash + 1);
+            }
+
+            gapClean(&panel->buffer);
+
+            panel->buffer = gapCreateEmpty();
+            if(directoryString.data){
+                gapInsertNullTerminatedStringAt(&panel->buffer, (char*)directoryString.data, 0);
+                gapSeekCursor(&panel->buffer, directoryString.size);
+
+                gapInsertNullTerminatedStringAt(&panel->buffer, suggestion, panel->buffer.cursor);
+            } else {
+                gapInsertNullTerminatedStringAt(&panel->buffer, suggestion, 0);
+            }
+            gapSeekCursor(&panel->buffer, strlen(suggestion));
+        }
     }
+    
     
     return true;
 }

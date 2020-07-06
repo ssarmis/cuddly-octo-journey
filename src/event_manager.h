@@ -4,11 +4,14 @@
 #include <SDL2/SDL.h>
 #include "keyboard_manager.h"
 
+#include "layout_manager.h"
+
 // SPONGE
 // move definitions for keys in something else
 #include "keyboard_bindings.h"
 
-void eventTick(bool* done, KeyboardManager* keyboardManager){
+// TODO(Sarmis) maybe replace the applicationLayoutData thing with a WindowEvent
+void eventTick(bool* done, LayoutEvent* layoutEvent, KeyboardManager* keyboardManager){
     SDL_Event event;
     // TODO(Sarmis) make a macro for the mask
     // that clears everything except the CTRL, SHIFT and ALT
@@ -18,6 +21,9 @@ void eventTick(bool* done, KeyboardManager* keyboardManager){
             case SDL_WINDOWEVENT: {
                     switch(event.window.event){
                         case SDL_WINDOWEVENT_SIZE_CHANGED: {
+                                layoutEvent->data0 = event.window.data1;
+                                layoutEvent->data1 = event.window.data2;
+                                layoutEvent->type |= LAYOUT_EVENT_RESIZE;
                             }
                             break;
                     }
@@ -26,6 +32,11 @@ void eventTick(bool* done, KeyboardManager* keyboardManager){
 
             case SDL_KEYUP: {
                     switch (event.key.keysym.scancode) {
+                        case SDL_SCANCODE_ESCAPE: {
+                                keyboardManager->currentActiveKeyStroke &= ~KEY_ESCAPE;
+                            }
+                            break;
+
                         case SDL_SCANCODE_LCTRL: case SDL_SCANCODE_RCTRL: {
                                 keyboardManager->currentActiveKeyStroke &= ~KEY_CTRL;
                             }
@@ -117,6 +128,7 @@ void eventTick(bool* done, KeyboardManager* keyboardManager){
             case SDL_KEYDOWN: {
                     switch (event.key.keysym.scancode) {
                         case SDL_SCANCODE_ESCAPE: {
+                                keyboardManager->currentActiveKeyStroke |= KEY_ESCAPE;
                             }
                             break;
 

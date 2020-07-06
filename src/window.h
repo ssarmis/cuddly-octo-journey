@@ -88,7 +88,7 @@ void editorWindowTick(EditorWindow* window, KeyboardManager* keyboardManager){
         return;
     }
 
-    binding.keyAction1(&window->buffer);
+    binding.keyAction1(window);
 }
 
 void editorWindowDecideCursorPositionByGapBuffer(EditorWindow* window, FontGL* font){

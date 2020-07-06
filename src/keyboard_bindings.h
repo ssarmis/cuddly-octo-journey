@@ -23,10 +23,11 @@
 #define KEY_END          (1 << 21)
 #define KEY_HOME         (1 << 20)
 
-// 0000 0000 0000 1110 0000 0000 0000 0000
+// 0000 0000 0000 1111 0000 0000 0000 0000
 #define KEY_RETURN       (1 << 19)
 #define KEY_DELETE       (1 << 18)
 #define KEY_BACKSPACE    (1 << 17)
+#define KEY_ESCAPE       (1 << 16)
 
 struct KeyboardBinding {
     u32 key;
@@ -155,27 +156,6 @@ void keyActionMoveCursorOverWordRight(void* data){
     GapBuffer* buffer = (GapBuffer*)data;
 
     gapSeekCursorToCapitalOrSpace(buffer);
-}
-
-
-void keyBindingInitialize(KeyboardBindingManager* keyboardBindingManager){
-    // keyBindingAddEntry(keyboardBindingManager, KEY_RETURN,              keyActionInsertNewline);
-
-    keyBindingAddEntry1(keyboardBindingManager, KEY_BACKSPACE,           keyActionRemoveCharacterBeforeCursor);
-    keyBindingAddEntry1(keyboardBindingManager, KEY_DELETE,              keyActionRemoveCharacterOnCursor);
-
-    keyBindingAddEntry1(keyboardBindingManager, KEY_HOME,                keyActionMoveCursorToBegginingOfLine);
-    keyBindingAddEntry1(keyboardBindingManager, KEY_END,                 keyActionMoveCursorToEndOfLine);
-
-    keyBindingAddEntry1(keyboardBindingManager, KEY_UP,                  keyActionMoveCursorToAboveLine);
-    keyBindingAddEntry1(keyboardBindingManager, KEY_DOWN,                keyActionMoveCursorToBelowLine);
-    keyBindingAddEntry1(keyboardBindingManager, KEY_LEFT,                keyActionMoveCursorLeft);
-    keyBindingAddEntry1(keyboardBindingManager, KEY_RIGHT,               keyActionMoveCursorRight);
-
-    keyBindingAddEntry1(keyboardBindingManager, KEY_CTRL | KEY_UP,       keyActionMoveCursor10LinesUp);
-    keyBindingAddEntry1(keyboardBindingManager, KEY_CTRL | KEY_DOWN,     keyActionMoveCursor10LinesDown);
-    keyBindingAddEntry1(keyboardBindingManager, KEY_CTRL | KEY_LEFT,     keyActionMoveCursorOverWordLeft);
-    keyBindingAddEntry1(keyboardBindingManager, KEY_CTRL | KEY_RIGHT,    keyActionMoveCursorOverWordRight);
 }
 
 KeyboardBinding keyBindingGetBindingByKey(KeyboardBindingManager* keyboardBindingManager, u32 key){

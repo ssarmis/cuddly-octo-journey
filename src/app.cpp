@@ -13,6 +13,7 @@
 #include "panel_actions.h"
 #include "panel_updates.h"
 #include "keyboard_manager.h"
+#include "window_bindings.h"
 #include "layout_manager.h"
 #include "event_manager.h"
 
@@ -25,6 +26,7 @@
 ApplicationLayoutData applicationLayoutData = {};
 
 int main(int argumentCount, char* arguments[]){
+    applicationLayoutData.scheduleChangeInSize = false;
 
     applicationLayoutData.windowWidth = 1280;
     applicationLayoutData.windowHeight = 768;
@@ -87,17 +89,7 @@ int main(int argumentCount, char* arguments[]){
                            orthographic(0, applicationLayoutData.windowWidth, 0, applicationLayoutData.windowHeight));
     });
 
-    bool done = false;
-
-
-    // GapBuffer buffer = {};
-    // buffer.data = new u8[GAP_DEFAULT_SIZE];
-    // memset(buffer.data, 0, GAP_DEFAULT_SIZE);
-    // buffer.size = GAP_DEFAULT_SIZE;
-    // buffer.cursor = 0;
-    // buffer.gap.start = 0;
-    // buffer.gap.end = GAP_DEFAULT_SIZE;
-
+	
     if(argumentCount > 1){
         applicationLayoutData.currentWindow->buffer = gapReadFile(arguments[1]);
     } else {
@@ -118,7 +110,6 @@ int main(int argumentCount, char* arguments[]){
     applicationLayoutData.panelGroup.saveFilePanel = panelCreate({0, 0, 0}, {400, FONT_HEIGHT * 3 + 12 + 4}, "Save file");
     applicationLayoutData.panelGroup.saveFilePanel.action = saveFileAction;
 
-#if 1
     KeyboardManager keyboardManager = {};
 
     for(char c = 'a'; c <= 'z'; ++c){
@@ -148,11 +139,12 @@ int main(int argumentCount, char* arguments[]){
 
     i32 time = 0;
 
-    // TODO(Sarmis) since this is only stuff relating window
-    // key binds, the function should be named and placed better
-    keyBindingInitialize(&windowKeyboardBindingManager);
+    editorWindowKeyBindingInitialize(&windowKeyboardBindingManager);
     layoutKeyBindingInitialize(&layoutManagerKeybindings);
 
+    LayoutEvent layoutEvent = {};
+
+    bool done = false;
     while(!done){
         time++;
         time %= 20;
@@ -160,14 +152,23 @@ int main(int argumentCount, char* arguments[]){
         glEnable(GL_BLEND);
         glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
-        // TODO(Sarmis) make something to hold this "done"
-        eventTick(&done, &keyboardManager);
+        eventTick(&done, &layoutEvent, &keyboardManager);
+        layoutManagerTick(&layoutEvent, &applicationLayoutData, &keyboardManager);
 
-        // printf("%x\n", keyboardManager.currentActiveKeyStroke);
-        // if(keyboardManager.currentActiveKeyStroke == (KEY_CTRL | KEY_TAB)){
-        // }
+        // maybe the schedule will be a list of changes question mark ?
+        if(applicationLayoutData.scheduleChangeInSize){
+            SHADER_SCOPE(shader.programId, {
+                shaderSetUniform4m(shader.locations.matrixPerspective, 
+                                orthographic(0, applicationLayoutData.windowWidth, 0, applicationLayoutData.windowHeight));
+            });
 
-        layoutManagerTick(&applicationLayoutData, &keyboardManager);
+            SHADER_SCOPE(shaderUI.programId, {
+                shaderSetUniform4m(shaderUI.locations.matrixPerspective, 
+                                orthographic(0, applicationLayoutData.windowWidth, 0, applicationLayoutData.windowHeight));
+            });
+
+            applicationLayoutData.scheduleChangeInSize = false;
+        }
 
         v2 uvs[4] = {};
 
@@ -202,11 +203,13 @@ int main(int argumentCount, char* arguments[]){
                  &renderBuffer, &renderBufferUI, &renderBufferBackground,
                  &font,
                  time, applicationLayoutData.windowWidth, applicationLayoutData.windowHeight);
+        } else if(applicationLayoutData.currentBuffer == &applicationLayoutData.panelGroup.panel.buffer){
+            applicationLayoutData.currentBuffer = &applicationLayoutData.currentWindow->buffer;
         }
         
         SDL_GL_SwapWindow(window);
     }
-#endif
+
     return 0;
 }
 
