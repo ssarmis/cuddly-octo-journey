@@ -262,7 +262,7 @@ _glVertexAttribBinding _inferno_glVertexAttribBinding = NULL;
 _glVertexBindingDivisor _inferno_glVertexBindingDivisor = NULL;
 _glDebugMessageControl _inferno_glDebugMessageControl = NULL;
 _glDebugMessageInsert _inferno_glDebugMessageInsert = NULL;
-_glDebugMessageCallback _inferno_glDebugMessageCallback = NULL;
+
 _glGetDebugMessageLog _inferno_glGetDebugMessageLog = NULL;
 _glPushDebugGroup _inferno_glPushDebugGroup = NULL;
 _glPopDebugGroup _inferno_glPopDebugGroup = NULL;
@@ -695,7 +695,7 @@ void initializeGL(){
     glBindAttribLocation = (_glBindAttribLocation) getProcAddress("glBindAttribLocation");
     glCompileShader = (_glCompileShader) getProcAddress("glCompileShader");
     glCreateProgram = (_glCreateProgram) getProcAddress("glCreateProgram");
-    _inferno_glCreateShader = (_glCreateShader) getProcAddress("glCreateShader");
+    glCreateShader = (_glCreateShader) getProcAddress("glCreateShader");
     glDeleteProgram = (_glDeleteProgram) getProcAddress("glDeleteProgram");
     glDeleteShader = (_glDeleteShader) getProcAddress("glDeleteShader");
     glDetachShader = (_glDetachShader) getProcAddress("glDetachShader");
@@ -815,7 +815,7 @@ void initializeGL(){
     glVertexBindingDivisor = (_glVertexBindingDivisor) getProcAddress("glVertexBindingDivisor");
     glDebugMessageControl = (_glDebugMessageControl) getProcAddress("glDebugMessageControl");
     glDebugMessageInsert = (_glDebugMessageInsert) getProcAddress("glDebugMessageInsert");
-    glDebugMessageCallback = (_glDebugMessageCallback) getProcAddress("glDebugMessageCallback");
+
     glGetDebugMessageLog = (_glGetDebugMessageLog) getProcAddress("glGetDebugMessageLog");
     glPushDebugGroup = (_glPushDebugGroup) getProcAddress("glPushDebugGroup");
     glPopDebugGroup = (_glPopDebugGroup) getProcAddress("glPopDebugGroup");

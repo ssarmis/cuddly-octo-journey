@@ -1,3 +1,7 @@
+#ifdef __APPLE__
+// NOTE(Sarmis) STFU ?
+#define GL_SILENCE_DEPRECATION
+#endif
 #include <SDL2/SDL.h>
 
 #include "gl.h"
@@ -26,6 +30,7 @@
 ApplicationLayoutData applicationLayoutData = {};
 
 int main(int argumentCount, char* arguments[]){
+
     applicationLayoutData.scheduleChangeInSize = false;
 
     applicationLayoutData.windowWidth = 1280;
@@ -46,7 +51,7 @@ int main(int argumentCount, char* arguments[]){
         return 1;
     }
 
-    SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 4);
+    SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 3);
     SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 3);
     SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_CORE);
 

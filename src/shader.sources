@@ -3,7 +3,7 @@
 
 const char* VERTEX_SOURCE = 
 R"(
-#version 440 core
+#version 330
 
 #define MATERIALS_MAXIMUM_AMOUNT 32
 
@@ -39,7 +39,7 @@ void main(){
 
 const char* FRAGMENT_SOURCE = 
 R"(
-#version 440 core
+#version 330
 
 #define v4 vec4
 #define v3 vec3
@@ -67,7 +67,8 @@ void main(){
         outputColor = v4(vertexColorOut, 1);
         outputColor.w = sampledColor.x;
     } else {
-        discard;
+        outputColor = v4(1, 0, 1, 1);
+        // discard;
     }
 }
 
@@ -76,7 +77,7 @@ void main(){
 
 const char* VERTEX_CURSOR_SOURCE = 
 R"(
-#version 440 core
+#version 330 core
 
 #define MATERIALS_MAXIMUM_AMOUNT 32
 
@@ -112,7 +113,7 @@ void main(){
 
 const char* FRAGMENT_CURSOR_SOURCE = 
 R"(
-#version 440 core
+#version 330 core
 
 #define v4 vec4
 #define v3 vec3

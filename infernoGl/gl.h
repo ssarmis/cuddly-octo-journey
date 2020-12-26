@@ -1,8 +1,19 @@
 #ifndef _INFERNO_GL_H_
 #define _INFERNO_GL_H_
 
+#ifdef __unix__
 #include <GL/glx.h>
+#elif defined __APPLE__
+#include <OpenGL/gl.h>
+#include <OpenGL/glu.h>
+
+#include <string.h>
+#include <mach-o/dyld.h>
+#endif
 #include <assert.h>
+
+#define GL_UNIFORM_BUFFER                 0x8A11
+#define GL_TEXTURE_2D_ARRAY               0x8C1A
 
 #define GL_BLEND_EQUATION_RGB             0x8009
 #define GL_VERTEX_ATTRIB_ARRAY_ENABLED    0x8622
@@ -327,7 +338,7 @@ typedef void (*_glVertexAttribBinding) (GLuint attribindex, GLuint bindingindex)
 typedef void (*_glVertexBindingDivisor) (GLuint bindingindex, GLuint divisor);
 typedef void (*_glDebugMessageControl) (GLenum source, GLenum type, GLenum severity, GLsizei count, const GLuint *ids, GLboolean enabled);
 typedef void (*_glDebugMessageInsert) (GLenum source, GLenum type, GLuint id, GLenum severity, GLsizei length, const GLchar *buf);
-typedef void (*_glDebugMessageCallback) (GLDEBUGPROC callback, const void *userParam);
+
 typedef GLuint (*_glGetDebugMessageLog) (GLuint count, GLsizei bufSize, GLenum *sources, GLenum *types, GLuint *ids, GLenum *severities, GLsizei *lengths, GLchar *messageLog);
 typedef void (*_glPushDebugGroup) (GLenum source, GLuint id, GLsizei length, const GLchar *message);
 typedef void (*_glPopDebugGroup) (void);
@@ -1074,8 +1085,10 @@ extern _glDebugMessageControl _inferno_glDebugMessageControl;
 #define glDebugMessageControl _inferno_glDebugMessageControl
 extern _glDebugMessageInsert _inferno_glDebugMessageInsert;
 #define glDebugMessageInsert _inferno_glDebugMessageInsert
-extern _glDebugMessageCallback _inferno_glDebugMessageCallback;
-#define glDebugMessageCallback _inferno_glDebugMessageCallback
+
+// extern _glDebugMessageCallback _inferno_glDebugMessageCallback;
+// #define glDebugMessageCallback _inferno_glDebugMessageCallback
+
 extern _glGetDebugMessageLog _inferno_glGetDebugMessageLog;
 #define glGetDebugMessageLog _inferno_glGetDebugMessageLog
 extern _glPushDebugGroup _inferno_glPushDebugGroup;
@@ -1480,12 +1493,26 @@ extern _glGenVertexArrays _inferno_glGenVertexArrays;
 extern _glIsVertexArray _inferno_glIsVertexArray;
 #define glIsVertexArray _inferno_glIsVertexArray
 
+
+void initializeGL();
+
 static inline void* getProcAddress(const char* name){
+#ifdef __unix__
     void* result = (void*)glXGetProcAddress((const GLubyte*)name);
     assert(result);
     return result;
-}
+#elif defined __APPLE__
+    char symbolName[256];
+    symbolName[0] = '_';
+    strcpy(symbolName + 1, name);
 
-void initializeGL();
+    NSSymbol symbol = NULL;
+    if (NSIsSymbolNameDefined(symbolName)){
+        symbol = NSLookupAndBindSymbol(symbolName);
+    }
+
+    return symbol ? NSAddressOfSymbol (symbol) : NULL; // 6
+#endif
+}
 
 #endif // _INFERNO_GL_H_

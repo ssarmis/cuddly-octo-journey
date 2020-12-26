@@ -1,1 +1,6 @@
-g++ -o app infernoGl/gl.cpp src/app.cpp -g -IinfernoGl -lSDL2main -lSDL2 -lGL -lpthread -DDEBUG_BUILD -std=c++11 -Wno-format -Wno-write-strings -Wno-narrowing
+#!/bin/sh
+g++ -o app infernoGl/gl.cpp src/app.cpp \
+    -L/opt/homebrew/Cellar/sdl2/2.0.14/lib -I/opt/homebrew/Cellar/sdl2/2.0.14/include \
+    -IinfernoGl -lSDL2main -lSDL2 -DDEBUG_BUILD -std=c++11 \
+    -framework OpenGL \
+    -Wno-#warnings -Wno-switch -Wno-shift-negative-value -Wno-deprecated-declarations -Wno-format -Wno-write-strings -Wno-narrowing -g 
