@@ -66,7 +66,7 @@ static KeyboardBindingManager windowKeyboardBindingManager;
 #include "keyboard_manager.h"
 
 void editorWindowTick(EditorWindow* window, KeyboardManager* keyboardManager){
-    if(!(keyboardManager->currentActiveKeyStroke & KEY_CTRL)){
+    if(!(keyboardManager->currentActiveKeyStroke & KEY_CTRL || keyboardManager->currentActiveKeyStroke & KEY_CMD)){
         char potentialCharacter = keyboardManager->currentActiveKeyStroke & 0xff;
         if(isAlphanumericCharacter(potentialCharacter)){
             gapInsertCharacterAt(&window->buffer, potentialCharacter, window->buffer.cursor);

@@ -36,7 +36,7 @@ bool panelDefaultTick(void* data0, void* data1, void* data2){
     EditorWindow* currentWindow = (EditorWindow*) data1;
     KeyboardManager* keyboardManager = (KeyboardManager*)data2;
 
-    if(!(keyboardManager->currentActiveKeyStroke & KEY_CTRL)){
+    if(!(keyboardManager->currentActiveKeyStroke & KEY_CTRL || keyboardManager->currentActiveKeyStroke & KEY_CMD)){
         char potentialCharacter = keyboardManager->currentActiveKeyStroke & 0xff;
         if(isAlphanumericCharacter(potentialCharacter)){
             gapInsertCharacterAt(&panel->buffer, potentialCharacter, panel->buffer.cursor);

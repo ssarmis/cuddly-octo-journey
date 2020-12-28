@@ -7,27 +7,32 @@
 
 // 1111 0000 0000 0000 0000 0000 0000 0000
 #define KEY_CTRL         (1 << 31)
-#define KEY_ALT          (1 << 30)
-#define KEY_SHIFT        (1 << 29)
-#define KEY_TAB          (1 << 28)
+#define KEY_CMD          (1 << 30)
+#define KEY_ALT          (1 << 29)
+#define KEY_SHIFT        (1 << 28)
 
 // 0000 1111 0000 0000 0000 0000 0000 0000
-#define KEY_UP           (1 << 27)
-#define KEY_DOWN         (1 << 26)
-#define KEY_LEFT         (1 << 25)
-#define KEY_RIGHT        (1 << 24)
+#define KEY_TAB          (1 << 27)
+#define KEY_UP           (1 << 26)
+#define KEY_DOWN         (1 << 25)
+#define KEY_LEFT         (1 << 24)
 
 // 0000 0000 1111 0000 0000 0000 0000 0000
-#define KEY_PAGEUP       (1 << 23)
-#define KEY_PAGEDOWN     (1 << 22)
-#define KEY_END          (1 << 21)
-#define KEY_HOME         (1 << 20)
+#define KEY_RIGHT        (1 << 23)
+#define KEY_PAGEUP       (1 << 22)
+#define KEY_PAGEDOWN     (1 << 21)
+#define KEY_END          (1 << 20)
 
 // 0000 0000 0000 1111 0000 0000 0000 0000
-#define KEY_RETURN       (1 << 19)
-#define KEY_DELETE       (1 << 18)
-#define KEY_BACKSPACE    (1 << 17)
-#define KEY_ESCAPE       (1 << 16)
+#define KEY_HOME         (1 << 19)
+#define KEY_RETURN       (1 << 18)
+#define KEY_DELETE       (1 << 17)
+#define KEY_BACKSPACE    (1 << 16)
+
+// TODO(Sarmis) rip unicode
+// 0000 0000 0000 0000 1000 0000 0000 0000
+#define KEY_ESCAPE       (1 << 15)
+
 
 struct KeyboardBinding {
     u32 key;

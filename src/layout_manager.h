@@ -230,6 +230,7 @@ void layoutKeyActionCopyAndRemoveString(void* data){
 void layoutKeyBindingInitialize(KeyboardBindingManager* keyboardBindingManager){
     keyBindingAddEntry1(keyboardBindingManager, KEY_ESCAPE,         layoutKeyActionCloseActivePanel);
 
+#ifdef __unix__
     keyBindingAddEntry1(keyboardBindingManager, KEY_CTRL | 'x',     layoutKeyActionCopyAndRemoveString);
     keyBindingAddEntry1(keyboardBindingManager, KEY_CTRL | 'c',     layoutKeyActionCopyString);
     keyBindingAddEntry1(keyboardBindingManager, KEY_CTRL | 'v',     layoutKeyActionPasteString);
@@ -240,5 +241,17 @@ void layoutKeyBindingInitialize(KeyboardBindingManager* keyboardBindingManager){
     keyBindingAddEntry1(keyboardBindingManager, KEY_CTRL | 'g',     layoutKeyActionGotoLinePanel);
     keyBindingAddEntry1(keyboardBindingManager, KEY_CTRL | 'f',     layoutKeyActionFindPanel);
     keyBindingAddEntry1(keyboardBindingManager, KEY_CTRL | KEY_TAB, layoutKeyActionChangeCurrentWindowToNext);
+#elif defined __APPLE__
+    keyBindingAddEntry1(keyboardBindingManager, KEY_CMD | 'x',     layoutKeyActionCopyAndRemoveString);
+    keyBindingAddEntry1(keyboardBindingManager, KEY_CMD | 'c',     layoutKeyActionCopyString);
+    keyBindingAddEntry1(keyboardBindingManager, KEY_CMD | 'v',     layoutKeyActionPasteString);
+
+    keyBindingAddEntry1(keyboardBindingManager, KEY_CMD | 'p',     layoutKeyActionOpenFilePanel);
+    keyBindingAddEntry1(keyboardBindingManager, KEY_CMD | 'o',     layoutKeyActionOpenFilePanel);
+    keyBindingAddEntry1(keyboardBindingManager, KEY_CMD | 's',     layoutKeyActionSaveFilePanel);
+    keyBindingAddEntry1(keyboardBindingManager, KEY_CMD | 'g',     layoutKeyActionGotoLinePanel);
+    keyBindingAddEntry1(keyboardBindingManager, KEY_CMD | 'f',     layoutKeyActionFindPanel);
+    keyBindingAddEntry1(keyboardBindingManager, KEY_CTRL | KEY_TAB, layoutKeyActionChangeCurrentWindowToNext);
+#endif
 }
 
