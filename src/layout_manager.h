@@ -223,7 +223,6 @@ void layoutKeyActionCopyAndRemoveString(void* data){
 		gapRemoveCharactersInRange(applicationLayoutData->currentBuffer, selectionBeggining, selectionEnding);
 
 		applicationLayoutData->currentBuffer->selection.end = applicationLayoutData->currentBuffer->selection.start;
-		gapSeekCursor(applicationLayoutData->currentBuffer, -(selectionEnding - selectionBeggining));
 	}
 }
 
