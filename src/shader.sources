@@ -67,8 +67,7 @@ void main(){
         outputColor = v4(vertexColorOut, 1);
         outputColor.w = sampledColor.x;
     } else {
-        outputColor = v4(1, 0, 1, 1);
-        // discard;
+        discard;
     }
 }
 
@@ -138,7 +137,7 @@ void main(){
     if(gl_FragCoord.x >= boundsLeft && gl_FragCoord.x <= boundsRight &&
        gl_FragCoord.y >= boundsTop && gl_FragCoord.y <= boundsBottom){
         outputColor = v4(vertexColorOut, 1);
-        outputColor.w = 0.8;
+        outputColor.w = 0.6;
     } else {
         discard;
     }
