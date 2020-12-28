@@ -37,10 +37,17 @@ void eventTick(bool* done, LayoutEvent* layoutEvent, KeyboardManager* keyboardMa
                             }
                             break;
 
+#ifdef __unix__
                         case SDL_SCANCODE_LCTRL: case SDL_SCANCODE_RCTRL: {
                                 keyboardManager->currentActiveKeyStroke &= ~KEY_CTRL;
                             }
                             break;
+#elif defined __APPLE__
+                        case SDL_SCANCODE_LGUI: case SDL_SCANCODE_RGUI: {
+                                keyboardManager->currentActiveKeyStroke &= ~KEY_CTRL;
+                            }
+                            break;
+#endif
 
                         case SDL_SCANCODE_PAGEUP: {
                                 keyboardManager->currentActiveKeyStroke &= ~KEY_PAGEUP;
@@ -131,12 +138,17 @@ void eventTick(bool* done, LayoutEvent* layoutEvent, KeyboardManager* keyboardMa
                                 keyboardManager->currentActiveKeyStroke |= KEY_ESCAPE;
                             }
                             break;
-
+#ifdef __unix__
                         case SDL_SCANCODE_LCTRL: case SDL_SCANCODE_RCTRL: {
                                 keyboardManager->currentActiveKeyStroke |= KEY_CTRL;
                             }
                             break;
-
+#elif defined __APPLE__
+                        case SDL_SCANCODE_LGUI: case SDL_SCANCODE_RGUI: {
+                                keyboardManager->currentActiveKeyStroke |= KEY_CTRL;
+                            }
+                            break;
+#endif
                         case SDL_SCANCODE_LSHIFT: case SDL_SCANCODE_RSHIFT: {
                                 keyboardManager->currentActiveKeyStroke |= KEY_SHIFT;
                             }
