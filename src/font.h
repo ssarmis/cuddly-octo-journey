@@ -47,15 +47,15 @@ void fontRenderGapBufferNoHighlights(v2 position, GapBuffer* buffer, RenderBuffe
         
         char character = buffer->data[i];
 
-        i32 glyphIndex = character - ' ';
-        Glyph glyph = font->glyphs[glyphIndex];
-
         if(character == '\n'){
             cursor.x = position.x;
             cursor.y += FONT_HEIGHT;
         } else if(character == '\t'){
             cursor.x += FONT_HEIGHT * 2;
         } else {
+            i32 glyphIndex = character - ' ';
+            Glyph glyph = font->glyphs[glyphIndex];
+
             if(cursor.y < upperLine){
                 continue;
             } else if(cursor.y > bottomLine){
@@ -110,8 +110,6 @@ void fontRenderGapBufferNoHighlights(v2 position, GapBuffer* buffer, RenderBuffe
             }
 
             char character = buffer->data[i];
-            i32 glyphIndex = character - ' ';
-            Glyph glyph = font->glyphs[glyphIndex];
         
             if(character == '\n'){
                 selectionCursor.x = position.x;
@@ -119,6 +117,9 @@ void fontRenderGapBufferNoHighlights(v2 position, GapBuffer* buffer, RenderBuffe
             } else if(character == '\t'){
                 selectionCursor.x += FONT_HEIGHT * 2;
             } else {
+                i32 glyphIndex = character - ' ';
+                Glyph glyph = font->glyphs[glyphIndex];
+
                 if(i >= selectionBeggining &&
                     i < selectionEnding){
                     
@@ -170,9 +171,6 @@ void fontRenderGapBuffer(v2 position, GapBuffer* buffer, RenderBuffer* renderBuf
             nextCharacter = buffer->data[i + 1];
         }
 
-        i32 glyphIndex = character - ' ';
-        Glyph glyph = font->glyphs[glyphIndex];
-
         if(character == '\n'){
             cursor.x = position.x;
             cursor.y += FONT_HEIGHT;
@@ -180,6 +178,9 @@ void fontRenderGapBuffer(v2 position, GapBuffer* buffer, RenderBuffer* renderBuf
         } else if(character == '\t'){
             cursor.x += FONT_HEIGHT * 2;
         } else {
+            i32 glyphIndex = character - ' ';
+            Glyph glyph = font->glyphs[glyphIndex];
+
             if(cursor.y < upperLine){
                 continue;
             } else if(cursor.y > bottomLine){
@@ -275,8 +276,10 @@ void fontRenderGapBuffer(v2 position, GapBuffer* buffer, RenderBuffer* renderBuf
             }
 
             char character = buffer->data[i];
-            i32 glyphIndex = character - ' ';
-            Glyph glyph = font->glyphs[glyphIndex];
+
+            if(!character){
+                continue;
+            }
         
             if(character == '\n'){
                 selectionCursor.x = position.x;
@@ -284,6 +287,9 @@ void fontRenderGapBuffer(v2 position, GapBuffer* buffer, RenderBuffer* renderBuf
             } else if(character == '\t'){
                 selectionCursor.x += FONT_HEIGHT * 2;
             } else {
+                i32 glyphIndex = character - ' ';
+                Glyph glyph = font->glyphs[glyphIndex];
+
                 if(i >= selectionBeggining &&
                     i < selectionEnding){
 

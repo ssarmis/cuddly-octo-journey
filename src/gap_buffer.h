@@ -135,10 +135,11 @@ void gapExtendGapBackwards(GapBuffer* buffer){
 
 void gapInsertCharacterAt(GapBuffer* buffer, char character, i32 position){
     buffer->dirty = true;
+    position = UserToGap(buffer->gap, position);
     if(position > buffer->size - 1){
         gapGrowGap(buffer, GAP_DEFAULT_SIZE);
     }
-    gapMoveGap(buffer, UserToGap(buffer->gap, position));
+    gapMoveGap(buffer, position);
 
     gapReplaceCharacterAt(buffer, character, buffer->gap.start);
     gapShrinkGap(buffer); // basically ++gap.start
@@ -170,12 +171,12 @@ bool gapCursorInGap(GapBuffer* buffer){
 
 void gapIncreaseCursor(GapBuffer* buffer){
     ++buffer->cursor;
-    // buffer->cursor = clamp(buffer->cursor, 0, buffer->size - 1);
+    buffer->cursor = clamp(buffer->cursor, 0, buffer->size - 1);
 }
 
 void gapDecreaseCursor(GapBuffer* buffer){
     --buffer->cursor;
-    // buffer->cursor = clamp(buffer->cursor, 0, buffer->size - 1);
+    buffer->cursor = clamp(buffer->cursor, 0, buffer->size - 1);
 }
 
 void gapSeekCursor(GapBuffer* buffer, i32 distance){
@@ -239,19 +240,35 @@ void gapSeekCursorToPreviousTabOrNewline(GapBuffer* buffer){
 void gapSeekCursorToPreviousNewline(GapBuffer* buffer){
     gapDecreaseCursor(buffer);
     i32 convertedCursor = UserToGap(buffer->gap, buffer->cursor);
-    if(convertedCursor < 0 || convertedCursor > buffer->size - 1){
-        buffer->cursor = clamp(buffer->cursor, 0, buffer->size - 1);
+    if(!convertedCursor || convertedCursor > buffer->size - 1){
         return;
     }
 
     while(buffer->data[convertedCursor] != '\n'){
         gapDecreaseCursor(buffer);
         convertedCursor = UserToGap(buffer->gap, buffer->cursor);
-        if(convertedCursor <= 0 || convertedCursor > buffer->size - 1){
-            break;
+        if(!convertedCursor || convertedCursor > buffer->size - 1){
+            return;
         }
     }
-    buffer->cursor = clamp(buffer->cursor, 0, buffer->size - 1);
+}
+
+void gapSeekCursorToNewline(GapBuffer* buffer){
+	gapIncreaseCursor(buffer);
+    i32 convertedCursor = UserToGap(buffer->gap, buffer->cursor);
+    if(convertedCursor > buffer->size - 1){
+        return;
+    }
+
+    // TODO(Sarmis) since the end of the buffer might me bagic
+    // just let this here for now..
+    while(buffer->data[convertedCursor] != '\n'){
+        gapIncreaseCursor(buffer);
+        convertedCursor = UserToGap(buffer->gap, buffer->cursor);
+        if(convertedCursor > buffer->size - 1){
+            return;
+        }
+    }
 }
 
 i32 gapGetAmontOfTabsBeforeCursor(GapBuffer* buffer){
@@ -273,27 +290,6 @@ i32 gapGetAmontOfTabsBeforeCursor(GapBuffer* buffer){
     }
 
     return result;
-}
-
-void gapSeekCursorToNewline(GapBuffer* buffer){
-	gapIncreaseCursor(buffer);
-    i32 convertedCursor = UserToGap(buffer->gap, buffer->cursor);
-    if(convertedCursor < 0 || convertedCursor > buffer->size - 1){
-        buffer->cursor = clamp(buffer->cursor, 0, buffer->size - 1);
-        return;
-    }
-
-    // TODO(Sarmis) since the end of the buffer might me bagic
-    // just let this here for now..
-    while(buffer->data[convertedCursor] != '\n' &&
-          buffer->data[convertedCursor] != '\0'){
-        gapIncreaseCursor(buffer);
-        convertedCursor = UserToGap(buffer->gap, buffer->cursor);
-        if(convertedCursor < 0 || convertedCursor > buffer->size - 1){
-            break;
-        }
-    }
-    buffer->cursor = clamp(buffer->cursor, 0, buffer->size - 1);
 }
 
 void gapSeekCursorToLine(GapBuffer* buffer, i32 line){

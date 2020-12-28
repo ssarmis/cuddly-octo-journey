@@ -62,11 +62,11 @@ void keywordPeek(u8* data, v3* color, u32* size){
     // this could end up in a segmentation fault
     // good for me I am only reading and not also 
     // writing :D
-    u8* neighbourLeft = data - 1;
+    // u8* neighbourLeft = data - 1;
     //
 
-    if(!(*neighbourLeft >= 'a' && *neighbourLeft <= 'z') &&
-       !(*neighbourLeft >= 'A' && *neighbourLeft <= 'Z')){
+    // if(!(*neighbourLeft >= 'a' && *neighbourLeft <= 'z') &&
+    //    !(*neighbourLeft >= 'A' && *neighbourLeft <= 'Z')){
 
         for(int i = 0; i < 38; ++i){
             Keyword keyword = KEYWORDS[i];
@@ -99,5 +99,5 @@ void keywordPeek(u8* data, v3* color, u32* size){
                 }
             }
         }
-    }
+    // }
 }
