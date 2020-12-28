@@ -121,8 +121,16 @@ void fontRenderGapBufferNoHighlights(v2 position, GapBuffer* buffer, RenderBuffe
             } else {
                 if(i >= selectionBeggining &&
                     i < selectionEnding){
+                    
+                    // TODO(Sarmis) this would be nice to not need to be computed everytime
+                    // just store it in the glyph, change the stb header or just wrap the 
+                    // baked glyph
+                    r32 glyphWidth = glyph.x1 - glyph.x0;
+                    r32 w = glyphWidth + glyph.xadvance - glyphWidth;
+                    r32 h = FONT_HEIGHT;
+
                     pushQuad(renderBufferUI, v3(selectionCursor.x, selectionCursor.y + 3, 0), 
-                            v2(FONT_HEIGHT / 2, FONT_HEIGHT + 3), uvs, SELECTION_COLOR_TEXT);
+                            v2(w, h), uvs, SELECTION_COLOR_TEXT);
                 }
 
                 selectionCursor.x += (glyph.xadvance);
@@ -278,8 +286,16 @@ void fontRenderGapBuffer(v2 position, GapBuffer* buffer, RenderBuffer* renderBuf
             } else {
                 if(i >= selectionBeggining &&
                     i < selectionEnding){
+
+                    // TODO(Sarmis) this would be nice to not need to be computed everytime
+                    // just store it in the glyph, change the stb header or just wrap the 
+                    // baked glyph
+                    r32 glyphWidth = glyph.x1 - glyph.x0;
+                    r32 w = glyphWidth + glyph.xadvance - glyphWidth;
+                    r32 h = FONT_HEIGHT;
+
                     pushQuad(renderBufferUI, v3(selectionCursor.x, selectionCursor.y + 3, 0), 
-                            v2(FONT_HEIGHT / 2, FONT_HEIGHT + 3), uvs, SELECTION_COLOR_TEXT);
+                            v2(w, h), uvs, SELECTION_COLOR_TEXT);
                 }
 
                 selectionCursor.x += (glyph.xadvance);

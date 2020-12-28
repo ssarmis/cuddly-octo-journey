@@ -165,7 +165,7 @@ void editorWindowRender(EditorWindow* window,
             {window->width, window->height}, uvs, window->backgroundColor);
 
     // current editing line
-    pushQuad(renderBufferBackground, v3(window->left + window->scrollX, window->cursor.y, 0), {window->width, FONT_HEIGHT + 3}, uvs, DEFAULT_COLOR_LINE);
+    pushQuad(renderBufferBackground, v3(window->left + window->scrollX, window->cursor.y, 0), {window->width, FONT_HEIGHT}, uvs, DEFAULT_COLOR_LINE);
 
     SHADER_SCOPE(shaderUI->programId, {
         shaderSetUniform4m(shaderUI->locations.matrixView, window->view);
@@ -182,7 +182,7 @@ void editorWindowRender(EditorWindow* window,
 
     if(activeWindow){
         if(time < 10){
-            pushQuad(renderBufferUI, window->cursor, {FONT_HEIGHT / 2, FONT_HEIGHT + 3}, uvs, DEFAULT_COLOR_CURSOR);
+            pushQuad(renderBufferUI, window->cursor, {FONT_HEIGHT / 2, FONT_HEIGHT}, uvs, DEFAULT_COLOR_CURSOR);
         }
     }
 
