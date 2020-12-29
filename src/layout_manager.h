@@ -164,6 +164,28 @@ void layoutKeyActionCopyString(void* data){
 }
 
 void layoutKeyActionPasteString(void* data){
+    /*
+    TODO(Sarmis)
+
+    Output:
+        ==3057==ERROR: AddressSanitizer: heap-buffer-overflow on address 0x000129f420e8 at pc 0x000100038440 bp 0x00016fdfd510 sp 0x00016fdfd508
+        READ of size 1 at 0x000129f420e8 thread T0
+            #0 0x10003843c in gapMoveGap(GapBuffer*, int) gap_buffer.h:104
+            #1 0x100064140 in main app.cpp:161
+            #2 0x185dfcf30 in start+0x0 (libdyld.dylib:arm64e+0x16f30)
+
+        0x000129f420e8 is located 0 bytes to the right of 24-byte region [0x000129f420d0,0x000129f420e8)
+        allocated by thread T0 here:
+            #0 0x100399580 in wrap__Znam+0x74 (libclang_rt.asan_osx_dynamic.dylib:arm64e+0x4d580)
+            #1 0x100037884 in gapGrowGap(GapBuffer*, int) gap_buffer.h:65
+            #2 0x100064140 in main app.cpp:161
+            #3 0x185dfcf30 in start+0x0 (libdyld.dylib:arm64e+0x16f30)
+    
+    How to reproduce:
+        write some text
+        copy all of it(from right to left selection)
+        paste at the beggining of buffer
+    */
     ApplicationLayoutData* applicationLayoutData = (ApplicationLayoutData*) data;
 
     if(SDL_HasClipboardText()){
@@ -223,6 +245,7 @@ void layoutKeyActionCopyAndRemoveString(void* data){
 		gapRemoveCharactersInRange(applicationLayoutData->currentBuffer, selectionBeggining, selectionEnding);
 
 		applicationLayoutData->currentBuffer->selection.end = applicationLayoutData->currentBuffer->selection.start;
+        applicationLayoutData->currentBuffer->cursor = applicationLayoutData->currentBuffer->selection.start;
 	}
 }
 
