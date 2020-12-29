@@ -247,7 +247,10 @@ void gapSeekCursorToPreviousNewline(GapBuffer* buffer){
     while(buffer->data[convertedCursor] != '\n'){
         gapDecreaseCursor(buffer);
         convertedCursor = UserToGap(buffer->gap, buffer->cursor);
-        if(!convertedCursor || convertedCursor > buffer->size - 1){
+        if(!convertedCursor){
+            return;
+        } else if(convertedCursor >= buffer->size - 1){
+            buffer->cursor = clamp(buffer->cursor, 0, buffer->size - 1);
             return;
         }
     }

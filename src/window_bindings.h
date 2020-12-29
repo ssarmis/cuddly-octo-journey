@@ -15,8 +15,14 @@ void editorWindowKeyActionRemoveCharacterOnCursor(void* data){
 
 void editorWindowKeyActionMoveCursorToBegginingOfLine(void* data){
     EditorWindow* window = (EditorWindow*) data;
+    i32 old = window->buffer.cursor;
     gapSeekCursorToPreviousNewline(&window->buffer);
+    if(old == window->buffer.cursor){
+        // we don't need to do anything, this thing didn't move at all
+        return;
+    }
     u32 convertedCoordinate = UserToGap(window->buffer.gap, window->buffer.cursor);
+
     if(isSpacingCharacter(window->buffer.data[convertedCoordinate])){
         gapIncreaseCursor(&window->buffer);
     }
