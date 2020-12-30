@@ -166,6 +166,13 @@ struct Buffer {
     u32 currentAmount;
     u32 capacity;
     T* array;
+    
+    T* begin() { return array; };
+    T* end() { return &array[currentAmount - 1]; };
+    const T* begin() const { return array; };
+    const T* end() const{ return &array[currentAmount - 1]; };
+    
+    T& operator[](int index){ return array[index]; }
 };
 
 template<typename T>
@@ -326,7 +333,6 @@ static inline void bufferClean(Buffer<T>* buffer){
         bufferCleanSafe<T>(buffer);
     }
 }
-
 
 String operator+(String left, const char* right){
     return concatenateStrings((char*)left.data, right);

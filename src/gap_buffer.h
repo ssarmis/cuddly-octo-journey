@@ -19,7 +19,7 @@ struct Selection {
 struct GapBuffer {
     bool dirty;
     char* filename;
-    union{
+    union {
         String bufferString;
         struct {
             u8* data;
@@ -73,7 +73,7 @@ void gapGrowGap(GapBuffer* buffer, i32 size){
         buffer->data[i + size] = clone[i];
     }
 
-    buffer->gap.end = buffer->gap.start + size;
+    buffer->gap.end += size;
 
     buffer->size += size;
 
@@ -136,9 +136,6 @@ void gapExtendGapBackwards(GapBuffer* buffer){
 void gapInsertCharacterAt(GapBuffer* buffer, char character, i32 position){
     buffer->dirty = true;
     position = UserToGap(buffer->gap, position);
-    if(position > buffer->size - 1){
-        gapGrowGap(buffer, GAP_DEFAULT_SIZE);
-    }
     gapMoveGap(buffer, position);
 
     gapReplaceCharacterAt(buffer, character, buffer->gap.start);
@@ -453,7 +450,7 @@ i32 gapRemoveCharactersInRange(GapBuffer* buffer, i32 start, i32 end){
     buffer->dirty = true;
     
     // start = UserToGap(buffer->gap, start);
-    i32 convertedEnd = UserToGap(buffer->gap, end);
+    i32 convertedEnd = end;
 
     if(start < 0){
         start = 0;
@@ -477,6 +474,11 @@ i32 gapInsertNullTerminatedStringAt(GapBuffer* buffer, char* string, i32 positio
     }
     return (position - clone);
 }
+
+i32 gapInsertStringAt(GapBuffer* buffer, String string, i32 position){
+    return gapInsertNullTerminatedStringAt(buffer, (char*)string.data, position);
+}
+
 
 GapBuffer gapCreateEmpty(){
     GapBuffer result = {};
@@ -509,9 +511,9 @@ GapBuffer gapReadFile(const char* filename){
 
     fseek(file, 0, SEEK_END);
     result.size = ftell(file);
-    result.size += GAP_DEFAULT_SIZE;
     fseek(file, 0, SEEK_SET);
 
+    result.size += GAP_DEFAULT_SIZE;
     result.data = new u8[result.size];
 
     memset(result.data, 0, result.size);

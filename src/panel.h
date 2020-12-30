@@ -16,7 +16,7 @@ struct Panel {
     v3 cursor;
     i32 shakeTime;
     char* description;
-    Buffer<char*> suggestions;
+    Buffer<String> suggestions;
     GapBuffer buffer;
     bool (*action)(void*, void*);
     bool (*tick)(void*, void*, void*);
@@ -148,7 +148,7 @@ void panelRender(Panel* panel, EditorWindow* currentWindow,
         v3 position = panel->position + v3(xOffset + 12, yAdjustment + yOffset + FONT_HEIGHT * i, 0);
         v2 size = v2(panel->size.x - 12, FONT_HEIGHT + 3);
         pushQuad(renderBufferBackground, position, size, uvs, DEFAULT_COLOR_PANEL_BACKGROUND_SUGGESTION);
-        fontRender((u8*)panel->suggestions.array[i], strlen(panel->suggestions.array[i]), {position.x + 12, position.y + 12}, renderBuffer, font, DEFAULT_COLOR_TEXT_PANEL_SUGGESTION);
+        fontRender((u8*)panel->suggestions[i].data, panel->suggestions[i].size, {position.x + 12, position.y + 12}, renderBuffer, font, DEFAULT_COLOR_TEXT_PANEL_SUGGESTION);
     }
 
     SHADER_SCOPE(shaderUI->programId, {

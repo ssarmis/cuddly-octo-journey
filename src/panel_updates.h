@@ -20,10 +20,10 @@ bool stringIsPartiallyMatching(char* substring, char* string){
     return true;
 }
 
-Buffer<char*> openFilePanelGenerateSuggestions(GapBuffer* buffer){
+Buffer<String> openFilePanelGenerateSuggestions(GapBuffer* buffer){
     // TODO(Sarmis) this is an allocation party
     // reusing buffers would've been much better
-    Buffer<char*> result = {};
+    Buffer<String> result = {};
 
     char* filename = gapToString(buffer);
 
@@ -48,8 +48,8 @@ Buffer<char*> openFilePanelGenerateSuggestions(GapBuffer* buffer){
                     directoryEntry->d_name[12] = 0;
                 }
 
-                // TODO(Sarmis) add Strings
-                bufferAppend<char*>(&result, directoryEntry->d_name);
+                String clone = cloneString(directoryEntry->d_name);
+                bufferAppend<String>(&result, clone);
             }
         }
         closedir(directory);
@@ -66,6 +66,20 @@ Buffer<char*> openFilePanelGenerateSuggestions(GapBuffer* buffer){
     return result;
 } 
 
+void cleanStringBuffer(Buffer<String> buffer){
+    ASSERT(buffer);
+    
+    for(int i = 0; i < buffer.currentAmount; ++i){
+        if(buffer[i].data){
+            buffer[i].size = 0;
+            delete[] buffer[i].data;
+        }
+    }
+    
+    // No need to deallocate buffer, just reuse it as much as we can
+    buffer.currentAmount = 0;
+}
+
 bool openFileTick(void* data0, void* data1, void* data2){
     Panel* panel = (Panel*)data0;
     KeyboardManager* keyboardManager = (KeyboardManager*)data2;
@@ -80,7 +94,7 @@ bool openFileTick(void* data0, void* data1, void* data2){
         if(panel->suggestions.currentAmount >= 1){
             // not the best way, but I am too lazy to fix my gap buffer
             // to not need to remake the buffer for this...
-            char* suggestion = panel->suggestions.array[0];
+            String suggestion = panel->suggestions[0];
             char* filename = gapToString(&panel->buffer);
             String filenameString = cloneString(filename);
             String directoryString;
@@ -98,11 +112,11 @@ bool openFileTick(void* data0, void* data1, void* data2){
                 gapInsertNullTerminatedStringAt(&panel->buffer, (char*)directoryString.data, 0);
                 gapSeekCursor(&panel->buffer, directoryString.size);
 
-                gapInsertNullTerminatedStringAt(&panel->buffer, suggestion, panel->buffer.cursor);
+                gapInsertStringAt(&panel->buffer, suggestion, panel->buffer.cursor);
             } else {
-                gapInsertNullTerminatedStringAt(&panel->buffer, suggestion, 0);
+                gapInsertStringAt(&panel->buffer, suggestion, 0);
             }
-            gapSeekCursor(&panel->buffer, strlen(suggestion));
+            gapSeekCursor(&panel->buffer, suggestion.size);
         }
     }
     
