@@ -197,7 +197,7 @@ void fontRenderGapBuffer(v2 position, GapBuffer* buffer, RenderBuffer* renderBuf
                 if(!size){
                     // NOTE(Sarmis) if you ever though you wrote bad code
                     // you never saw this approach/function here
-                    keywordPeek(&buffer->data[i], &color, &size);
+                    keywordPeek(buffer, i, &color, &size);
                 }
             }
 
