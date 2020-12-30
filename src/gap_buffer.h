@@ -96,11 +96,25 @@ void gapMoveGap(GapBuffer* buffer, i32 position){
     if(position < buffer->gap.start){
         u32 shiftAmount = buffer->gap.start - position;
         while(shiftAmount--){
+            // NOTE(Sarmis) I know that this is executed quite a few time
+            // and doesn't look fast, but I will change it once
+            // it becomes slow
+            if(buffer->gap.start - 1 < 0 ||
+               buffer->gap.end - 1 < 0){
+                return;
+            }
             buffer->data[buffer->gap.end-- - 1] = buffer->data[buffer->gap.start-- - 1];
         }
     } else if(position > buffer->gap.end){
         u32 shiftAmount = position - buffer->gap.end;
         while(shiftAmount--){
+            // NOTE(Sarmis) I know that this is executed quite a few time
+            // and doesn't look fast, but I will change it once
+            // it becomes slow
+            if(buffer->gap.start + 1 > buffer->size ||
+               buffer->gap.end + 1 > buffer->size){
+                return;
+            }
             buffer->data[buffer->gap.start++] = buffer->data[buffer->gap.end++];
         }
     }
@@ -130,7 +144,7 @@ void gapExtendGap(GapBuffer* buffer){
 
 void gapExtendGapBackwards(GapBuffer* buffer){
     ++buffer->gap.end;
-    buffer->gap.end = clamp(buffer->gap.end, 0, buffer->size - 1);
+    buffer->gap.end = clamp(buffer->gap.end, 0, buffer->size);
 }
 
 void gapInsertCharacterAt(GapBuffer* buffer, char character, i32 position){
@@ -148,6 +162,9 @@ void gapInsertCharacterAt(GapBuffer* buffer, char character, i32 position){
 
 void gapRemoveCharacterNearAt(GapBuffer* buffer, i32 position){
     buffer->dirty = true;
+    if(gapGetGapSize(buffer) + position > buffer->size){
+        return;
+    }
     gapMoveGap(buffer, UserToGap(buffer->gap, position));
     gapExtendGapBackwards(buffer); // basically ++gap.end
 }
