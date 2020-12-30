@@ -57,47 +57,42 @@ Keyword KEYWORDS[] = {
     {"r64", 3, KEYWORD_COLOR_SPECIAL}
 };
 
-void keywordPeek(u8* data, v3* color, u32* size){
-	// NOTE(Sarmis) yes, this has no bounds check
-    // this could end up in a segmentation fault
-    // good for me I am only reading and not also 
-    // writing :D
-    // u8* neighbourLeft = data - 1;
-    //
+void keywordPeek(GapBuffer* buffer, u32 index, v3* color, u32* size){
+#if 0
+    u32 allowedDistance = buffer->size - index;
+    for(int i = 0; i < 38; ++i){
+        Keyword keyword = KEYWORDS[i];
+        u8* clone = &buffer->data[index];
+        u8* name = (u8*)keyword.name;
+        bool match = true;
 
-    // if(!(*neighbourLeft >= 'a' && *neighbourLeft <= 'z') &&
-    //    !(*neighbourLeft >= 'A' && *neighbourLeft <= 'Z')){
-
-        for(int i = 0; i < 38; ++i){
-            Keyword keyword = KEYWORDS[i];
-            u8* clone = data;
-            u8* name = (u8*)keyword.name;
-            bool match = true;
-
-            while(*clone != ' ' && *clone != '\t' && *clone != '\n' &&
-                *clone != ')' && *clone != '(' &&
-                *clone != '{' && *clone != '}' &&
-                *clone != '!' &&
-                *clone != '@' && *clone != '\r' &&
-                *clone != ':' && *clone != ';'){
-                if(!(clone - data - keyword.size)){
-                    break;
-                }
-                if(*clone++ != *name++){
-                    match = false;
-                    break;
-                }
+        while(*clone != ' ' && *clone != '\t' && *clone != '\n' &&
+            *clone != ')' && *clone != '(' &&
+            *clone != '{' && *clone != '}' &&
+            *clone != '!' &&
+            *clone != '@' && *clone != '\r' &&
+            *clone != ':' && *clone != ';'){
+            if(!(clone - &buffer->data[index] - keyword.size)){
+                break;
             }
-            u32 referenceSize = clone - data;
-            if(match && referenceSize == keyword.size){
-                u8 *neighbourRight = clone;
-                if(!(*neighbourRight >= 'a' && *neighbourRight <= 'z') &&
-                   !(*neighbourRight >= 'A' && *neighbourRight <= 'Z')){
-
-                    *color = KEYWORDS[i].color;
-                    *size = referenceSize + 1;
-                }
+            if(*clone++ != *name++){
+                match = false;
+                break;
+            }
+            if(clone - &buffer->data[index] > allowedDistance){
+                break;
             }
         }
-    // }
+        u32 referenceSize = clone - &buffer->data[index];
+        if(match && referenceSize == keyword.size){
+            u8 *neighbourRight = clone;
+            if(!(*neighbourRight >= 'a' && *neighbourRight <= 'z') &&
+               !(*neighbourRight >= 'A' && *neighbourRight <= 'Z')){
+
+                *color = KEYWORDS[i].color;
+                *size = referenceSize + 1;
+            }
+        }
+    }
+#endif
 }
