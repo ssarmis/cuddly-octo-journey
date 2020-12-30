@@ -4,13 +4,28 @@
 
 void editorWindowKeyActionRemoveCharacterBeforeCursor(void* data){
     EditorWindow* window = (EditorWindow*) data;
-    gapRemoveCharacterAt(&window->buffer, window->buffer.cursor);
+    
+    if(gapGetSelectionSize(&window->buffer)){
+        gapRemoveCharactersInRange(&window->buffer, window->buffer.selection.start, window->buffer.selection.end);
+        window->buffer.selection.end = window->buffer.selection.start;
+    } else {
+        gapRemoveCharacterAt(&window->buffer, window->buffer.cursor);
+    }
+
     gapDecreaseCursor(&window->buffer);
 }
 
 void editorWindowKeyActionRemoveCharacterOnCursor(void* data){
     EditorWindow* window = (EditorWindow*) data;
-    gapRemoveCharacterNearAt(&window->buffer, window->buffer.cursor);
+
+    if(gapGetSelectionSize(&window->buffer)){
+        gapRemoveCharactersInRange(&window->buffer, window->buffer.selection.start, window->buffer.selection.end);
+        window->buffer.cursor = window->buffer.selection.start;
+        window->buffer.selection.end = window->buffer.selection.start;
+    } else {
+        gapRemoveCharacterNearAt(&window->buffer, window->buffer.cursor);
+    }
+    
 }
 
 inline void editorWindowMoveCursorToBegginingOfLine(EditorWindow* window){
