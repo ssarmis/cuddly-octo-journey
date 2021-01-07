@@ -101,13 +101,73 @@ u32 characterLastOccurence(String string, char character){
 
     while((start - string.data) < string.size){
         if(*start == character){
-            result = start - string.data;
+            result = start - string.data - 1; // this should probably have a -1
         }
         ++start;
     }
 
     return result;
 }
+
+i32 icharacterFirstOccurence(String string, char character){
+    u32 result = -1;
+    u8* start = string.data;
+
+    while((start - string.data) < string.size){
+        if(*start == character){
+            result = start - string.data;
+            return result;
+        }
+        ++start;
+    }
+
+    return result;
+}
+
+i32 icharacterLastOccurence(String string, char character){
+    u32 result = -1;
+    u8* start = string.data;
+
+    while((start - string.data) < string.size){
+        if(*start == character){
+            result = start - string.data - 1; // this should probably have a -1
+        }
+        ++start;
+    }
+
+    return result;
+}
+
+String cloneStringNoGap(String string){
+    String result = {};
+
+    i32 first = icharacterFirstOccurence(string, '\0');
+    i32 last = icharacterLastOccurence(string, '\0');
+
+    if(first == -1){
+        // no 0's, just clone
+        result = cloneString(string, string.size);
+    } else {
+        result.size = string.size - (last - first);
+        
+        result.data = new u8[result.size + 1];
+        result.data[result.size] = '\0';
+        
+        // copy before first
+        int i;
+        for(i = 0; i < first; ++i){
+            result.data[i] = string.data[i];
+        }
+        
+        // copy after last
+        for(int ii = last + 1; ii < string.size; ++ii){
+            result.data[i++] = string.data[ii];
+        }
+    }
+    
+    return result;
+}
+
 
 
 String subString(String string, u32 start, u32 end){
@@ -350,6 +410,27 @@ void operator+=(String& left, String right){
     left = left + right;
 }
 
+bool operator==(String& left, const char* right){
+    i32 rlen = strlen(right);
+
+    if(left.size != rlen){
+        return false;
+    }
+
+    u8* clone = left.data;
+
+    while(*right){
+        if(*clone++ != *right++){
+            return false;
+        }
+    }
+    return true;
+}
+
+bool operator!=(String& left, const char* right){
+    return !(left == right);
+}
+
 static void skipSpacesInBuffer(u8*& buffer){
     while(*buffer == ' ' || 
           *buffer == '\t'){
@@ -376,7 +457,7 @@ static u32 readU32FromBuffer(u8* buffer){
 }
 
 
-bool isSpacingCharacter(char character){
+static inline bool isSpacingCharacter(char character){
     if(character == '\n' || character == '\r' ||
        character == '\t' || character ==  ' '){
         return true;
@@ -384,7 +465,7 @@ bool isSpacingCharacter(char character){
     return false;
 }
 
-bool isSymbolCharacter(char character){
+static inline bool isSymbolCharacter(char character){
     if(character == '`' || character == '~' || character == '!' ||
        character == '@' || character == '#' || character == '$' ||
        character == '%' || character == '^' || character == '&' ||
@@ -400,13 +481,22 @@ bool isSymbolCharacter(char character){
     return false;
 }
 
-bool isAlphanumericCharacter(char character){
+static inline bool isAlphabeticalCharacter(char character){
+    if((character >= 'a' && character <= 'z') ||
+       (character >= 'A' && character <= 'Z')){
 
+        return true;
+    }
+    return false;
+}
+
+static inline bool isAlphanumericCharacter(char character){
     if((character >= 'a' && character <= 'z') ||
        (character >= 'A' && character <= 'Z') ||
-       (isSymbolCharacter(character) ||
+       (isSymbolCharacter(character) || // ugh ? wtf bruh
        (character >= '0' && character <= '9'))){
-           return true;
+
+        return true;
        }
     return false;
 }

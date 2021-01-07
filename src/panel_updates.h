@@ -33,6 +33,7 @@ Buffer<String> openFilePanelGenerateSuggestions(GapBuffer* buffer){
 
     u32 lastSlash = characterLastOccurence(filenameString, '/');
     if(lastSlash){
+        ++lastSlash;
         directoryString = subString(filenameString, 0, lastSlash);
         filenameString = subString(filenameString, lastSlash + 1, filenameString.size);
         fullpathString = directoryString + "/" + filenameString;
@@ -67,8 +68,6 @@ Buffer<String> openFilePanelGenerateSuggestions(GapBuffer* buffer){
 } 
 
 void cleanStringBuffer(Buffer<String> buffer){
-    ASSERT(buffer);
-    
     for(int i = 0; i < buffer.currentAmount; ++i){
         if(buffer[i].data){
             buffer[i].size = 0;
@@ -102,6 +101,7 @@ bool openFileTick(void* data0, void* data1, void* data2){
 
             u32 lastSlash = characterLastOccurence(filenameString, '/');
             if(lastSlash){
+                ++lastSlash;
                 directoryString = subString(filenameString, 0, lastSlash + 1);
             }
 
