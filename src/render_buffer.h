@@ -23,7 +23,7 @@ struct RenderBuffer {
     u32 totalUsedVertices;
 };
 
-RenderBuffer createVertexArrayObject(u32 vertexBufferSize=VERTEX_BUFFER_SIZE, u32 indexBufferSize=INDEX_BUFFER_SIZE){
+static RenderBuffer createVertexArrayObject(u32 vertexBufferSize=VERTEX_BUFFER_SIZE, u32 indexBufferSize=INDEX_BUFFER_SIZE){
     RenderBuffer result = {};
 
     glGenVertexArrays(1, &result.vertexArrayId);
@@ -43,7 +43,7 @@ RenderBuffer createVertexArrayObject(u32 vertexBufferSize=VERTEX_BUFFER_SIZE, u3
     return result;
 }
 
-void pushPreProcesedQuadsIndices(RenderBuffer* buffer){
+static void pushPreProcesedQuadsIndices(RenderBuffer* buffer){
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, buffer->indexBufferId);
     Index* indices = NULL;
 
@@ -67,7 +67,7 @@ void pushPreProcesedQuadsIndices(RenderBuffer* buffer){
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
 }
 
-void pushVerteciesToRenderBuffer(RenderBuffer* buffer, Vertex* vertecies, u32 amount){
+static void pushVerteciesToRenderBuffer(RenderBuffer* buffer, Vertex* vertecies, u32 amount){
     VERTEX_BUFFER_SCOPE(buffer->vertexBufferId, {
         u32 dataSize = amount * sizeof(Vertex);
 
@@ -82,11 +82,11 @@ void pushVerteciesToRenderBuffer(RenderBuffer* buffer, Vertex* vertecies, u32 am
     }, GL_ARRAY_BUFFER);
 }
 
-void pushVerteciesToRenderBuffer(RenderBuffer* buffer, Buffer<Vertex> array){
+static void pushVerteciesToRenderBuffer(RenderBuffer* buffer, Buffer<Vertex> array){
     pushVerteciesToRenderBuffer(buffer, array.array, array.currentAmount);
 }
 
-void pushIndicesToRenderBuffer(RenderBuffer* buffer, Index* indices, u32 amount){
+static void pushIndicesToRenderBuffer(RenderBuffer* buffer, Index* indices, u32 amount){
     VERTEX_BUFFER_SCOPE(buffer->indexBufferId, {
         u32 dataSize = amount * sizeof(Index);
         
@@ -100,26 +100,26 @@ void pushIndicesToRenderBuffer(RenderBuffer* buffer, Index* indices, u32 amount)
     }, GL_ELEMENT_ARRAY_BUFFER);
 }
 
-void pushIndicesToRenderBuffer(RenderBuffer* buffer, Buffer<Index> array){
+static void pushIndicesToRenderBuffer(RenderBuffer* buffer, Buffer<Index> array){
     pushIndicesToRenderBuffer(buffer, array.array, array.currentAmount);
 }
 
 // NOTE(Sarmis): use temporaryBuffer before calling glBufferData
-void pushVertexToRenderBuffer(RenderBuffer* buffer, Vertex vertex){
+static void pushVertexToRenderBuffer(RenderBuffer* buffer, Vertex vertex){
     VERTEX_BUFFER_SCOPE(buffer->vertexBufferId, {
         u32 offset = (buffer->totalUsedVertices++) * sizeof(Vertex);
         glBufferSubData(GL_ARRAY_BUFFER, offset, sizeof(Vertex), &vertex);
     }, GL_ARRAY_BUFFER);
 }
 
-void pushIndexToRenderBuffer(RenderBuffer* buffer, Index index){
+static void pushIndexToRenderBuffer(RenderBuffer* buffer, Index index){
     VERTEX_BUFFER_SCOPE(buffer->indexBufferId, {
         u32 offset = (buffer->totalUsedIndices++) * sizeof(Index);
         glBufferSubData(GL_ELEMENT_ARRAY_BUFFER, offset, sizeof(Index), &index);
     }, GL_ELEMENT_ARRAY_BUFFER);
 }
 
-void pushQuad(RenderBuffer* renderBuffer, v3 position, v2 size, v2* uvs, v3 color=v3(1, 1, 1)){
+static void pushQuad(RenderBuffer* renderBuffer, v3 position, v2 size, v2* uvs, v4 color){
     Vertex vertecies[4] = {
         Vertex(position,                         uvs[2], color),
         Vertex(position + v3(size.x, 0, 0),      uvs[3], color),
@@ -141,7 +141,11 @@ void pushQuad(RenderBuffer* renderBuffer, v3 position, v2 size, v2* uvs, v3 colo
     pushIndicesToRenderBuffer(renderBuffer, indices, 6);
 }
 
-void flushRenderBuffer(GLenum mode, RenderBuffer* renderBuffer){
+static void pushQuad(RenderBuffer* renderBuffer, v3 position, v2 size, v2* uvs, v3 color=v3(1, 1, 1)){
+    pushQuad(renderBuffer, position, size, uvs, v4(color, 1));
+}
+
+static void flushRenderBuffer(GLenum mode, RenderBuffer* renderBuffer){
     VERTEX_ARRAY_BUFFER_SCOPE(renderBuffer->vertexArrayId, {
         glDrawElements(mode, renderBuffer->totalUsedIndices, GL_UNSIGNED_INT, 0);
     });

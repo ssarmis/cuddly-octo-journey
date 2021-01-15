@@ -17,13 +17,15 @@ struct Panel {
     i32 shakeTime;
     char* description;
     Buffer<String> suggestions;
+    u32 lastFind;
     GapBuffer buffer;
-    bool (*action)(void*, void*);
+    bool (*action)(void*, void*, void*);
     bool (*tick)(void*, void*, void*);
 };
 
 struct PanelGroup {
     Panel panel; // the actual panel that will be ticked and displayed
+    Panel quickOpenPanel;
     Panel openFilePanel;
     Panel findPanel;
     Panel saveFilePanel;
@@ -42,13 +44,17 @@ bool panelDefaultTick(void* data0, void* data1, void* data2){
             gapInsertCharacterAt(&panel->buffer, potentialCharacter, panel->buffer.cursor);
             gapIncreaseCursor(&panel->buffer);
             return true;
-        } else if(keyboardManager->currentActiveKeyStroke & KEY_BACKSPACE){
+        } else if(isSpacingCharacter(potentialCharacter)){
+            gapInsertCharacterAt(&panel->buffer, potentialCharacter, panel->buffer.cursor);
+            gapIncreaseCursor(&panel->buffer);
+            return true;
+        }else if(keyboardManager->currentActiveKeyStroke & KEY_BACKSPACE){
             keyActionRemoveCharacterBeforeCursor(&panel->buffer);
             return true;
         } else {
             if(keyboardManager->currentActiveKeyStroke & KEY_RETURN){
                 // TODO(Sarmis) panel->action(...)
-                bool actionStatus = panel->action(currentWindow, &panel->buffer);
+                bool actionStatus = panel->action(panel, currentWindow, &panel->buffer);
                 if(!actionStatus){
                     panel->shakeTime = 20;
                 } else {
@@ -80,7 +86,7 @@ Panel panelCreate(v3 position, v2 size, char* description){
 
 void panelDecideCursorPositionByGapBuffer(Panel* panel, FontGL* font){
     for(int i = 0; i < panel->buffer.cursor; ++i){
-        i32 convertedOffset = UserToGap(panel->buffer.gap, i);
+        i32 convertedOffset = gapUserToGap (panel->buffer.gap, i);
         if(convertedOffset >= panel->buffer.size - 1){
             break;
         }
@@ -136,6 +142,7 @@ void panelRender(Panel* panel, EditorWindow* currentWindow,
 
     r32 yOffset = (FONT_HEIGHT * 4);
     r32 xOffset = 0;
+
     for(int i = 0; i < panel->suggestions.currentAmount; ++i){
         r32 yAdjustment = 0;
         // ugly way to wrap the suggestions, its only one page

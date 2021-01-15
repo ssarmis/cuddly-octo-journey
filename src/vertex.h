@@ -23,12 +23,13 @@ struct Vertex {
     };
 
     union {
-        v3 color;
-        v3 rgb;
+        v4 color;
+        v4 rgba;
         struct {
             r32 r;
             r32 g;
             r32 b;
+            r32 A;
         };
     };
 
@@ -45,7 +46,7 @@ struct Vertex {
     position(position), uv(uv), color(0){
     }
 
-    Vertex(v3 position, v2 uv, v3 color):
+    Vertex(v3 position, v2 uv, v4 color):
     position(position), uv(uv), color(color){
     }
 };

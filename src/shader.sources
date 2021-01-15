@@ -1,7 +1,7 @@
 #pragma once
 
 
-const char* VERTEX_SOURCE = 
+static const char* VERTEX_SOURCE = 
 R"(
 #version 330
 
@@ -16,14 +16,14 @@ R"(
 
 layout(location=0) in v3 vertexPosition;
 layout(location=1) in v2 vertexUV;
-layout(location=2) in v3 vertexColor;
+layout(location=2) in v4 vertexColor;
 
 uniform m4 matrixPerspective;
 uniform m4 matrixTransform;
 uniform m4 matrixView;
 
 out v2 vertexUVOut;
-out v3 vertexColorOut;
+out v4 vertexColorOut;
 
 void main(){
     v4 worldPosition = matrixTransform * v4(vertexPosition, 1);
@@ -37,7 +37,7 @@ void main(){
 
 )";
 
-const char* FRAGMENT_SOURCE = 
+static const char* FRAGMENT_SOURCE = 
 R"(
 #version 330
 
@@ -49,7 +49,7 @@ R"(
 #define r32 float
 
 in v2 vertexUVOut;
-in v3 vertexColorOut;
+in v4 vertexColorOut;
 
 out v4 outputColor;
 
@@ -64,7 +64,7 @@ void main(){
     if(gl_FragCoord.x >= boundsLeft && gl_FragCoord.x <= boundsRight &&
        gl_FragCoord.y >= boundsTop && gl_FragCoord.y <= boundsBottom){
         v4 sampledColor = texture(materialTextures, v2(vertexUVOut.x, vertexUVOut.y));
-        outputColor = v4(vertexColorOut, 1);
+        outputColor = v4(vertexColorOut);
         outputColor.w = sampledColor.x;
     } else {
         discard;
@@ -74,7 +74,7 @@ void main(){
 )";
 
 
-const char* VERTEX_CURSOR_SOURCE = 
+static const char* VERTEX_CURSOR_SOURCE = 
 R"(
 #version 330 core
 
@@ -89,14 +89,14 @@ R"(
 
 layout(location=0) in v3 vertexPosition;
 layout(location=1) in v2 vertexUV;
-layout(location=2) in v3 vertexColor;
+layout(location=2) in v4 vertexColor;
 
 uniform m4 matrixPerspective;
 uniform m4 matrixTransform;
 uniform m4 matrixView;
 
 out v2 vertexUVOut;
-out v3 vertexColorOut;
+out v4 vertexColorOut;
 
 void main(){
     v4 worldPosition = matrixTransform * v4(vertexPosition, 1);
@@ -110,7 +110,7 @@ void main(){
 
 )";
 
-const char* FRAGMENT_CURSOR_SOURCE = 
+static const char* FRAGMENT_CURSOR_SOURCE = 
 R"(
 #version 330 core
 
@@ -122,7 +122,7 @@ R"(
 #define r32 float
 
 in v2 vertexUVOut;
-in v3 vertexColorOut;
+in v4 vertexColorOut;
 
 out v4 outputColor;
 
@@ -136,8 +136,7 @@ uniform sampler2D materialTextures;
 void main(){
     if(gl_FragCoord.x >= boundsLeft && gl_FragCoord.x <= boundsRight &&
        gl_FragCoord.y >= boundsTop && gl_FragCoord.y <= boundsBottom){
-        outputColor = v4(vertexColorOut, 1);
-        outputColor.w = 0.6;
+        outputColor = v4(vertexColorOut);
     } else {
         discard;
     }

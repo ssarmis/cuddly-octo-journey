@@ -44,7 +44,7 @@ struct KeyboardBindingManager {
     Buffer<KeyboardBinding> keyBindings;
 };
 
-void keyBindingAddEntry2(KeyboardBindingManager* keyboardBindingManager, u32 key, void (*keyAction)(void*, void*)){
+static void keyBindingAddEntry2(KeyboardBindingManager* keyboardBindingManager, u32 key, void (*keyAction)(void*, void*)){
     KeyboardBinding binding = {};
 
     binding.key = key;
@@ -54,7 +54,7 @@ void keyBindingAddEntry2(KeyboardBindingManager* keyboardBindingManager, u32 key
     bufferAppend<KeyboardBinding>(&keyboardBindingManager->keyBindings, &binding);
 }
 
-void keyBindingAddEntry1(KeyboardBindingManager* keyboardBindingManager, u32 key, void (*keyAction)(void*)){
+static void keyBindingAddEntry1(KeyboardBindingManager* keyboardBindingManager, u32 key, void (*keyAction)(void*)){
     KeyboardBinding binding = {};
 
     binding.key = key;
@@ -65,35 +65,35 @@ void keyBindingAddEntry1(KeyboardBindingManager* keyboardBindingManager, u32 key
     bufferAppend<KeyboardBinding>(&keyboardBindingManager->keyBindings, &binding);
 }
 
-void keyActionRemoveCharacterBeforeCursor(void* data){
+static void keyActionRemoveCharacterBeforeCursor(void* data){
     GapBuffer* buffer = (GapBuffer*)data;
     gapRemoveCharacterAt(buffer, buffer->cursor);
     gapDecreaseCursor(buffer);
 }
 
-void keyActionRemoveCharacterOnCursor(void* data){
+static void keyActionRemoveCharacterOnCursor(void* data){
     GapBuffer* buffer = (GapBuffer*)data;
     gapRemoveCharacterNearAt(buffer, buffer->cursor);
 }
 
-void keyActionMoveCursorToBegginingOfLine(void* data){
+static void keyActionMoveCursorToBegginingOfLine(void* data){
     GapBuffer* buffer = (GapBuffer*)data;
     gapSeekCursorToPreviousNewline(buffer);
-    u32 convertedCoordinate = UserToGap(buffer->gap, buffer->cursor);
+    u32 convertedCoordinate = gapUserToGap (buffer->gap, buffer->cursor);
     if(isSpacingCharacter(buffer->data[convertedCoordinate])){
         gapIncreaseCursor(buffer);
     }
 }
 
-void keyActionMoveCursorToEndOfLine(void* data){
+static void keyActionMoveCursorToEndOfLine(void* data){
     GapBuffer* buffer = (GapBuffer*)data;
     gapSeekCursorToNewline(buffer);
 }
 
-void keyActionMoveCursorToAboveLine(void* data){
+static void keyActionMoveCursorToAboveLine(void* data){
     GapBuffer* buffer = (GapBuffer*)data;
 
-    // u32 convertedCoordinate = UserToGap(buffer->gap, buffer->cursor);
+    // u32 convertedCoordinate = gapUserToGap (buffer->gap, buffer->cursor);
     // if(isSpacingCharacter(buffer->data[convertedCoordinate])){
     //     gapDecreaseCursor(buffer);
     // }
@@ -113,7 +113,7 @@ void keyActionMoveCursorToAboveLine(void* data){
     }
 }
 
-void keyActionMoveCursorToBelowLine(void* data){
+static void keyActionMoveCursorToBelowLine(void* data){
     GapBuffer* buffer = (GapBuffer*)data;
 
     i32 distanceOnCurrentLineToBegging = gapGetDistanceFromPreviousNewline(buffer);
@@ -126,44 +126,44 @@ void keyActionMoveCursorToBelowLine(void* data){
     }
 }
 
-void keyActionMoveCursorLeft(void* data){
+static void keyActionMoveCursorLeft(void* data){
     GapBuffer* buffer = (GapBuffer*)data;
     gapDecreaseCursor(buffer);
 }
 
-void keyActionMoveCursorRight(void* data){
+static void keyActionMoveCursorRight(void* data){
     GapBuffer* buffer = (GapBuffer*)data;
     gapIncreaseCursor(buffer);
 }
 
-void keyActionMoveCursor10LinesUp(void* data){
+static void keyActionMoveCursor10LinesUp(void* data){
     GapBuffer* buffer = (GapBuffer*)data;
     gapSeekCursorINewlinesIfPossible(buffer, -10);
 }
 
-void keyActionMoveCursor10LinesDown(void* data){
+static void keyActionMoveCursor10LinesDown(void* data){
     GapBuffer* buffer = (GapBuffer*)data;
     gapSeekCursorINewlinesIfPossible(buffer, 10);
 }
 
-void keyActionMoveCursorOverWordLeft(void* data){
+static void keyActionMoveCursorOverWordLeft(void* data){
     GapBuffer* buffer = (GapBuffer*)data;
 
-    gapSeekCursorToPreviousCapitalOrSpace(buffer);
+    gapSeekCursorToPreviousSymbolOrSpace(buffer);
 
-    i32 convertedCoordinate = UserToGap(buffer->gap, buffer->cursor);
+    i32 convertedCoordinate = gapUserToGap (buffer->gap, buffer->cursor);
     if(isSpacingCharacter(buffer->data[convertedCoordinate])){
         gapIncreaseCursor(buffer);
     }
 }
 
-void keyActionMoveCursorOverWordRight(void* data){
+static void keyActionMoveCursorOverWordRight(void* data){
     GapBuffer* buffer = (GapBuffer*)data;
 
-    gapSeekCursorToCapitalOrSpace(buffer);
+    gapSeekCursorToSymbolOrSpace(buffer);
 }
 
-KeyboardBinding keyBindingGetBindingByKey(KeyboardBindingManager* keyboardBindingManager, u32 key){
+static KeyboardBinding keyBindingGetBindingByKey(KeyboardBindingManager* keyboardBindingManager, u32 key){
     KeyboardBinding result = {};
 
     for(int i = 0; i < keyboardBindingManager->keyBindings.currentAmount; ++i){
@@ -186,3 +186,4 @@ KeyboardBinding keyBindingGetBindingByKey(KeyboardBindingManager* keyboardBindin
 
 
 
+ 

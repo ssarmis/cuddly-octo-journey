@@ -36,7 +36,7 @@
     glEnableVertexAttribArray((index));\
 }
 
-GLint createVertexBuffer(int size){
+static GLint createVertexBuffer(int size){
     GLuint result;
     glGenBuffers(1, &result);
     VERTEX_BUFFER_SCOPE(result, {
@@ -44,13 +44,13 @@ GLint createVertexBuffer(int size){
         // TODO(Sarmis) move this out of this function to make this a general purpose function
         ADD_VERTEX_ATTRIB(VERTEX_POSITION_ATTRIBUTE, 3, GL_FLOAT, offsetof(Vertex, position));
         ADD_VERTEX_ATTRIB(VERTEX_UV_ATTRIBUTE, 2, GL_FLOAT, offsetof(Vertex, uv));
-        ADD_VERTEX_ATTRIB(VERTEX_COLOR_ATTRIBUTE, 3, GL_FLOAT, offsetof(Vertex, rgb));
+        ADD_VERTEX_ATTRIB(VERTEX_COLOR_ATTRIBUTE, 4, GL_FLOAT, offsetof(Vertex, rgba));
     }, GL_ARRAY_BUFFER);
 
     return result;
 }
 
-GLuint createUniformBuffer(u32 size){
+static GLuint createUniformBuffer(u32 size){
     GLuint result;
     glGenBuffers(1, &result);
 
@@ -61,7 +61,7 @@ GLuint createUniformBuffer(u32 size){
     return result;
 }
 
-GLint createElementBuffer(int size){
+static GLint createElementBuffer(int size){
     GLuint result;
     glGenBuffers(1, &result);
 
@@ -86,7 +86,7 @@ struct TextureCube {
     u32 height;
 };
 
-u8* downSampleTexture2x(u8* texture, u32 width, u32 height){
+static u8* downSampleTexture2x(u8* texture, u32 width, u32 height){
     u32 w = width / 2;
     u32 h = height / 2;
     u8* result = new u8[w * 3 * h];
@@ -101,7 +101,7 @@ u8* downSampleTexture2x(u8* texture, u32 width, u32 height){
     return result;
 }
 
-GLuint createGLTextureCube(u32 width, u32 height, u8** textures){
+static GLuint createGLTextureCube(u32 width, u32 height, u8** textures){
     GLuint result;
 
     glGenTextures(1, &result);
@@ -139,7 +139,7 @@ GLuint createGLTextureCube(u32 width, u32 height, u8** textures){
     return result;
 }
 
-GLuint createGLTexture2DArray(u32 width, u32 height, u8 depth){
+static GLuint createGLTexture2DArray(u32 width, u32 height, u8 depth){
     GLuint result;
 
     glGenTextures(1, &result);
@@ -159,7 +159,7 @@ GLuint createGLTexture2DArray(u32 width, u32 height, u8 depth){
     return result;
 }
 
-TextureCube createTextureCube(u32 width, u32 height, u8** textures){
+static TextureCube createTextureCube(u32 width, u32 height, u8** textures){
     TextureCube result = {};
 
     result.width = width;
@@ -169,7 +169,7 @@ TextureCube createTextureCube(u32 width, u32 height, u8** textures){
     return result;
 }
 
-Texture2DArray createTexture2DArray(u32 width, u32 height, u8 depth){
+static Texture2DArray createTexture2DArray(u32 width, u32 height, u8 depth){
     Texture2DArray result = {};
     result.width = width;
     result.height = height;
@@ -178,7 +178,7 @@ Texture2DArray createTexture2DArray(u32 width, u32 height, u8 depth){
     return result;
 }
 
-void emplaceTextureInCube(TextureCube* textureCube, u8* data, GLenum type){
+static void emplaceTextureInCube(TextureCube* textureCube, u8* data, GLenum type){
     TEXTURE_SCOPE(textureCube->textureId, {
         glTexImage2D(type, 0, GL_RGB, 
                     textureCube->width, textureCube->height,
@@ -188,7 +188,7 @@ void emplaceTextureInCube(TextureCube* textureCube, u8* data, GLenum type){
     }, GL_TEXTURE_CUBE_MAP);
 }
 
-void emplaceTextureIn2DArray(Texture2DArray* textureArray, u8* data, u32 offset){
+static void emplaceTextureIn2DArray(Texture2DArray* textureArray, u8* data, u32 offset){
     TEXTURE_SCOPE(textureArray->textureId, {
         glTexSubImage3D(GL_TEXTURE_2D_ARRAY, 0,
                         0, 0, offset,
@@ -198,12 +198,12 @@ void emplaceTextureIn2DArray(Texture2DArray* textureArray, u8* data, u32 offset)
     }, GL_TEXTURE_2D_ARRAY);
 }
 
-void pushTextureIn2DArray(Texture2DArray* textureArray, u8* data){
+static void pushTextureIn2DArray(Texture2DArray* textureArray, u8* data){
     ASSERT(textureArray->texturesAmount < 8);
     emplaceTextureIn2DArray(textureArray, data, textureArray->texturesAmount++);
 }
 
-void setTextureBinding(u8 bindingPosition, GLuint textureId, GLenum type){
+static void setTextureBinding(u8 bindingPosition, GLuint textureId, GLenum type){
     glActiveTexture(GL_TEXTURE0 + bindingPosition);
     glBindTexture(type, textureId);
 }

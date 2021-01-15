@@ -1,8 +1,13 @@
+#define STB_TRUETYPE_IMPLEMENTATION  // force following include to generate implementation
+
 #ifdef __APPLE__
 // NOTE(Sarmis) STFU ?
 #define GL_SILENCE_DEPRECATION
 #endif
 #include <SDL2/SDL.h>
+
+#include <unistd.h>
+#include <errno.h>
 
 #include "gl.h"
 #include "gl_utilities.h"
@@ -11,6 +16,7 @@
 #include "shader.h"
 #include "font.h"
 
+#include "settings.h"
 #include "gap_buffer.h"
 #include "window.h"
 #include "panel.h"
@@ -29,8 +35,35 @@
 
 ApplicationLayoutData applicationLayoutData = {};
 
-int main(int argumentCount, char* arguments[]){
+String findFont(char* name){
+#ifdef __unix__
+    char commandString[256] = {};
+    char commandOutput[512] = {};
 
+    strcat(commandString, "fc-match --format=%{file} ");
+    strcat(commandString, name);
+    
+    FILE* command = popen(commandString, "r");
+
+    ASSERT(command);
+
+    fgets(commandOutput, 512, command);
+
+    pclose(command);
+    String result = cloneString(commandOutput);
+    return result;
+#else
+    String result = cloneString("LiberationMono-Regular.ttf");
+    return result;
+#endif
+}
+
+
+int main(int argumentCount, char* arguments[]){
+    
+#if 1
+    // TODO(Sarmis) only load file contents to a certain depth
+    // so not everything is loaded
     applicationLayoutData.scheduleChangeInSize = false;
 
     applicationLayoutData.windowWidth = 1280;
@@ -40,12 +73,39 @@ int main(int argumentCount, char* arguments[]){
     applicationLayoutData.windows[0] = windowCreate(applicationLayoutData.windowWidth / 2,
                                                     applicationLayoutData.windowHeight, 0, 0);
     applicationLayoutData.windows[1] = windowCreate(applicationLayoutData.windowWidth / 2,
-                                                    applicationLayoutData.windowHeight, applicationLayoutData.windowWidth / 2, 0);
+                                                    applicationLayoutData.windowHeight, applicationLayoutData.windowWidth / 2 + 2, 0);
+
+    applicationLayoutData.layoutWindows[0] = applicationLayoutData.windows[0]; 
+    applicationLayoutData.layoutWindows[1] = applicationLayoutData.windows[1];
 
     applicationLayoutData.currentWindowIndex = 0;
     applicationLayoutData.currentWindow = &applicationLayoutData.windows[0];
     applicationLayoutData.currentBuffer = &applicationLayoutData.currentWindow->buffer;
 
+
+    gapInsertNullTerminatedStringAt(&applicationLayoutData.windows[1].buffer, R"(
+********************************************************************
+
+                    uwu Welcome to my editor
+
+            I hope you won't get annoyed by the bugs ;)
+        it has some basic functionalities:
+            - basic C/C++ syntax highlighting (static, int, void, etc...)
+              not customizeable yet without the source code
+            - 2 windows, one can be closed, the other can be opened again
+              with CTRL + SHIFT + UP,
+              any number of windows is supported with any positioning
+              but I don't have a proper grid system in place right now
+            - basic UNDO
+            - find/goto line
+            - highlights on words
+
+        Thank you for using me *chu* <3
+
+********************************************************************
+
+    )", 0);
+    
     if(SDL_Init(SDL_INIT_EVERYTHING) < 0){
         TRACE("Could not initialize SDL2\n");
         return 1;
@@ -71,6 +131,11 @@ int main(int argumentCount, char* arguments[]){
 
     TRACE("%s\n", glGetString(GL_VERSION));
 
+    /// now that SDL things are done we can complete the settings
+
+    ///
+
+
     SDL_Event event;
 
     RenderBuffer renderBuffer = createVertexArrayObject();
@@ -79,8 +144,10 @@ int main(int argumentCount, char* arguments[]){
     RenderBuffer renderBufferBackground = createVertexArrayObject();
     RenderBuffer renderBufferUI = createVertexArrayObject();
 
-    FontGL font = createFont();
-    
+    String fontPath = findFont("LiberationMono-Regular.ttf");
+
+    FontGL font = createFont((char*)fontPath.data);
+
     Shader shader = createShader();
     Shader shaderUI = createShaderCursor();
 
@@ -98,16 +165,25 @@ int main(int argumentCount, char* arguments[]){
     if(argumentCount > 1){
         applicationLayoutData.currentWindow->buffer = gapReadFile(arguments[1]);
     } else {
+        // applicationLayoutData.filePool = editorFilePoolLoadAllFilesFromDirectory("./", true);
         applicationLayoutData.currentWindow->buffer = gapCreateEmpty();
     }
 
     // TODO(Sarmis) make initialization for these
+    // TODO(Sarmis) using virtual functions would yield
+    //              a similar result but with les hussle
+
+    applicationLayoutData.panelGroup.quickOpenPanel = panelCreate({0, 0, 0}, {400, FONT_HEIGHT * 3 + 12 + 4}, "Quick open");
+    applicationLayoutData.panelGroup.quickOpenPanel.action = quickOpenFileAction;
+    applicationLayoutData.panelGroup.quickOpenPanel.tick = quickOpenFileTick;
+
     applicationLayoutData.panelGroup.openFilePanel = panelCreate({0, 0, 0}, {400, FONT_HEIGHT * 3 + 12 + 4}, "Open file");
     applicationLayoutData.panelGroup.openFilePanel.action = openFileAction;
     applicationLayoutData.panelGroup.openFilePanel.tick = openFileTick;
 
     applicationLayoutData.panelGroup.findPanel = panelCreate({0, 0, 0}, {400, FONT_HEIGHT * 3 + 12 + 4}, "Find");
     applicationLayoutData.panelGroup.findPanel.action = findAction;
+    applicationLayoutData.panelGroup.findPanel.tick = findTick;
 
     applicationLayoutData.panelGroup.gotoLinePanel = panelCreate({0, 0, 0}, {400, FONT_HEIGHT * 3 + 12 + 4}, "Goto line");
     applicationLayoutData.panelGroup.gotoLinePanel.action = gotoLineAction;
@@ -149,10 +225,11 @@ int main(int argumentCount, char* arguments[]){
 
     LayoutEvent layoutEvent = {};
 
+
     bool done = false;
     while(!done){
         time++;
-        time %= 20;
+        time %= 40;
 
         glEnable(GL_BLEND);
         glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
@@ -179,7 +256,7 @@ int main(int argumentCount, char* arguments[]){
 
         glViewport(0, 0, applicationLayoutData.windowWidth, applicationLayoutData.windowHeight);
 
-        glClearColor(DEFAULT_COLOR_BACKGROUND.x, DEFAULT_COLOR_BACKGROUND.y, DEFAULT_COLOR_BACKGROUND.z, 1);
+        glClearColor(0.3, 0.3, 0.3, 1);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
         glActiveTexture(GL_TEXTURE0);
@@ -189,25 +266,38 @@ int main(int argumentCount, char* arguments[]){
         // or just tick the panels first and consume the keystroke if
         // it was used in a tick
 
+        // debugging
+        // char buffer[(1 << 10) * 100];
+        // gapClean(&applicationLayoutData.windows[1].buffer);
+        // applicationLayoutData.windows[1].buffer = gapCreateEmpty();
+        // gapPrintGap(buffer, &applicationLayoutData.windows[0].buffer);
+        // gapInsertNullTerminatedStringAt(&applicationLayoutData.windows[1].buffer, buffer, 0);
+        //
+
+
         for(int i = 0; i < applicationLayoutData.windowCount; ++i){
-            if(i == applicationLayoutData.currentWindowIndex && !applicationLayoutData.panelGroup.panel.active){
-                editorWindowTick(&applicationLayoutData.windows[i], &keyboardManager);
+            if(applicationLayoutData.windows[i].visible){
+                if(i == applicationLayoutData.currentWindowIndex && !applicationLayoutData.panelGroup.panel.active){
+                    editorWindowTick(&applicationLayoutData.windows[i], &keyboardManager);
+                }
+                editorWindowRender(&applicationLayoutData.windows[i], 
+                            &shader, &shaderUI,
+                            &renderBuffer, &renderBufferUI, &renderBufferBackground,
+                            &font,
+                            time, applicationLayoutData.currentWindowIndex == i);
             }
-            editorWindowRender(&applicationLayoutData.windows[i], 
-                        &shader, &shaderUI,
-                        &renderBuffer, &renderBufferUI, &renderBufferBackground,
-                        &font,
-                        time, applicationLayoutData.currentWindowIndex == i);
         }
         
         if(applicationLayoutData.panelGroup.panel.active){
             applicationLayoutData.panelGroup.panel.tick(&applicationLayoutData.panelGroup.panel,
                                                         applicationLayoutData.currentWindow, &keyboardManager);
-            panelRender(&applicationLayoutData.panelGroup.panel, applicationLayoutData.currentWindow,
-                 &shader, &shaderUI,
-                 &renderBuffer, &renderBufferUI, &renderBufferBackground,
-                 &font,
-                 time, applicationLayoutData.windowWidth, applicationLayoutData.windowHeight);
+            if(applicationLayoutData.panelGroup.panel.active){ // could become inactive in ticking
+                panelRender(&applicationLayoutData.panelGroup.panel, applicationLayoutData.currentWindow,
+                    &shader, &shaderUI,
+                    &renderBuffer, &renderBufferUI, &renderBufferBackground,
+                    &font,
+                    time, applicationLayoutData.windowWidth, applicationLayoutData.windowHeight);
+            }
         } else if(applicationLayoutData.currentBuffer == &applicationLayoutData.panelGroup.panel.buffer){
             applicationLayoutData.currentBuffer = &applicationLayoutData.currentWindow->buffer;
         }
@@ -215,7 +305,12 @@ int main(int argumentCount, char* arguments[]){
         SDL_GL_SwapWindow(window);
     }
 
+    bufferClean<Selection>(&applicationLayoutData.windows[0].selections);
+    editorFilePoolFreeSpace(&applicationLayoutData.filePool);
+
+#endif
     return 0;
 }
 
 
+  

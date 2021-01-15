@@ -1,4 +1,6 @@
 #pragma once
+
+#include <string.h>
 #include <stdint.h>
 
 #ifdef DEBUG_BUILD
@@ -44,13 +46,21 @@ typedef u32 Index;
                                              ((r32)end.tv_nsec - (r32)start.tv_nsec) / 1000000.0);\
 }
 
+static i32 cuddle_clamp(i32 value, i32 min, i32 max){
+    if(value < min){
+        return min;
+    } else if (value > max) {
+        return max;
+    }
+    return value;
+}
 
 struct String {
     u8* data;
     i32 size;
 };
 
-String cloneString(u8* buffer, u32 size){
+static String cloneString(u8* buffer, u32 size){
     String result = {};
     result.size = size;
     result.data = new u8[size + 1];
@@ -67,11 +77,23 @@ String cloneString(u8* buffer, u32 size){
     return result;
 }
 
-String cloneString(String string, u32 size){
+static String cloneString(String string, u32 size){
     return cloneString(string.data, size);
 }
 
-String cloneString(const char* string){
+static String cloneString(char character){
+    String result = {};
+
+    result.data = new u8[2];
+    result.data[0] = character;
+    result.data[1] = 0;
+    result.size = 1;
+
+    return result;
+}
+
+
+static String cloneString(const char* string){
     String result = {};
 
     u32 size = strlen(string);
@@ -80,7 +102,7 @@ String cloneString(const char* string){
     return result;
 }
 
-u32 characterFirstOccurence(String string, char character){
+static u32 characterFirstOccurence(String string, char character){
     u32 result = 0;
     u8* start = string.data;
 
@@ -95,7 +117,7 @@ u32 characterFirstOccurence(String string, char character){
     return result;
 }
 
-u32 characterLastOccurence(String string, char character){
+static u32 characterLastOccurence(String string, char character){
     u32 result = 0;
     u8* start = string.data;
 
@@ -109,7 +131,7 @@ u32 characterLastOccurence(String string, char character){
     return result;
 }
 
-i32 icharacterFirstOccurence(String string, char character){
+static i32 icharacterFirstOccurence(String string, char character){
     u32 result = -1;
     u8* start = string.data;
 
@@ -124,7 +146,7 @@ i32 icharacterFirstOccurence(String string, char character){
     return result;
 }
 
-i32 icharacterLastOccurence(String string, char character){
+static i32 icharacterLastOccurence(String string, char character){
     u32 result = -1;
     u8* start = string.data;
 
@@ -138,7 +160,7 @@ i32 icharacterLastOccurence(String string, char character){
     return result;
 }
 
-String cloneStringNoGap(String string){
+static String cloneStringNoGap(String string){
     String result = {};
 
     i32 first = icharacterFirstOccurence(string, '\0');
@@ -170,13 +192,13 @@ String cloneStringNoGap(String string){
 
 
 
-String subString(String string, u32 start, u32 end){
+static String subString(String string, u32 start, u32 end){
     String result = {};
     result = cloneString(&string.data[start], end - start);
     return result;
 }
 
-String subString(String string, char delimiter){
+static String subString(String string, char delimiter){
     String result = {};
     u8* start = string.data;
     u32 size = 0;
@@ -189,7 +211,7 @@ String subString(String string, char delimiter){
     return result;
 }
 
-String concatenateStrings(const char* A, const char* B){
+static String concatenateStrings(const char* A, const char* B){
     String result = {};
     
     u32 sizeA = strlen(A);
@@ -214,7 +236,7 @@ String concatenateStrings(const char* A, const char* B){
 }
 
 
-String concatenateStrings(String A, String B){
+static String concatenateStrings(String A, String B){
     // TODO(Sarmis) this will need to be changed
     // if the null terminator from the strings will be removed
     return concatenateStrings((char*)A.data, (char*)B.data);
@@ -275,7 +297,7 @@ static inline void bufferAppend(Buffer<T>* buffer, Buffer<T>* addition){
         ASSERT(false);
     }
 
-    if(buffer->currentAmount == buffer->capacity){
+    if(buffer->currentAmount + addition->currentAmount >= buffer->capacity){
         buffer->capacity = (buffer->capacity) * 2 + addition->currentAmount;
         T* clone = buffer->array;
         buffer->array = new T[buffer->capacity];
@@ -344,6 +366,7 @@ static inline void bufferAppendAt(Buffer<T>* buffer, T* entry, u32 index){
 }
 
 
+
 template<typename T>
 static inline void bufferRemove(Buffer<T>* buffer, u32 start, u32 end){
     if(!buffer){
@@ -394,23 +417,23 @@ static inline void bufferClean(Buffer<T>* buffer){
     }
 }
 
-String operator+(String left, const char* right){
+static String operator+(String left, const char* right){
     return concatenateStrings((char*)left.data, right);
 }
 
-String operator+(const char* left, String right){
+static String operator+(const char* left, String right){
     return concatenateStrings(left, (char*)right.data);
 }
 
-String operator+(String left, String right){
+static String operator+(String left, String right){
     return concatenateStrings(left, right);
 }
 
-void operator+=(String& left, String right){
+static void operator+=(String& left, String right){
     left = left + right;
 }
 
-bool operator==(String& left, const char* right){
+static bool operator==(String& left, const char* right){
     i32 rlen = strlen(right);
 
     if(left.size != rlen){
@@ -427,7 +450,11 @@ bool operator==(String& left, const char* right){
     return true;
 }
 
-bool operator!=(String& left, const char* right){
+static bool operator==(String& left, String& right){
+    return left == (char*)right.data;
+}
+
+static bool operator!=(String& left, const char* right){
     return !(left == right);
 }
 
@@ -474,7 +501,7 @@ static inline bool isSymbolCharacter(char character){
        character == '_' || character == '[' || character == ']' ||
        character == '\\' || character == '{' || character == '}' ||
        character == ';' || character == '\'' || character == ':' ||
-       character == '"' || character == ',' || character == '.' ||
+       character == '"' || character == ',' || character == '.' || character == '|' ||
        character == '/' || character == '<' || character == '>' || character == '?'){
            return true;
     }
@@ -493,10 +520,24 @@ static inline bool isAlphabeticalCharacter(char character){
 static inline bool isAlphanumericCharacter(char character){
     if((character >= 'a' && character <= 'z') ||
        (character >= 'A' && character <= 'Z') ||
-       (isSymbolCharacter(character) || // ugh ? wtf bruh
+       (isSymbolCharacter(character) ||
        (character >= '0' && character <= '9'))){
 
         return true;
        }
     return false;
+}
+
+
+// NOTE(Sarmis) ONLY USE ON CLONED STRINGS
+//              NOT ON REFERENCES
+static void cleanStringBuffer(Buffer<String> buffer){
+    for(int i = 0; i < buffer.currentAmount; ++i){
+        if(buffer[i].data){
+            buffer[i].size = 0;
+            delete[] buffer[i].data;
+        }
+    }
+    
+    bufferClean<String>(&buffer);
 }

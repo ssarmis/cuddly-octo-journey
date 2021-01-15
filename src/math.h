@@ -53,6 +53,10 @@ struct v4 {
     v4(r32 x, r32 y, r32 z, r32 w):
     x(x), y(y), z(z), w(w){
     }
+
+    v4(v3 v, r32 w):
+    x(v.x), y(v.y), z(v.z), w(w){
+    }
 };
 
 struct m4 {
@@ -131,7 +135,7 @@ static inline m4 rotateY(r32 angle){
 }
 
 // TODO(Sarmis) implement this as SIMD
-m4 operator*(m4 left, m4 right){
+static m4 operator*(m4 left, m4 right){
     m4 result = {};
 
     for(int row = 0; row < 4; ++row){
@@ -147,11 +151,11 @@ m4 operator*(m4 left, m4 right){
     return result;
 }
 
-void operator*=(m4& left, m4 right){
+static void operator*=(m4& left, m4 right){
     left = left*right;
 }
 
-v3 operator*(v3 left, r32 right){
+static v3 operator*(v3 left, r32 right){
     v3 result = {};
     result.x = left.x * right;
     result.y = left.y * right;
@@ -159,50 +163,84 @@ v3 operator*(v3 left, r32 right){
     return result;
 }
 
-v3 operator*(r32 left, v3 right){
+static v3 operator*(r32 left, v3 right){
     return right * left;
 }
 
-v3 operator-(v3& vector){
+static v3 operator-(v3& vector){
     return v3(-vector.x, -vector.y, -vector.z);
 }
 
-v3 operator+(v3 left, v3 right){
+static v3 operator+(v3 left, v3 right){
     return v3(left.x + right.x, left.y + right.y, left.z + right.z);
 }
 
-v2 operator+(v2 left, v2 right){
+static v2 operator+(v2 left, v2 right){
     return v2(left.x + right.x, left.y + right.y);
 }
 
-v3 operator-(v3 left, v3 right){
+static v3 operator-(v3 left, v3 right){
     return v3(left.x - right.x, left.y - right.y, left.z - right.z);
 }
 
-void operator+=(v3& left, v3 right){
+
+static v4 operator*(v4 left, r32 right){
+    v4 result = {};
+    result.x = left.x * right;
+    result.y = left.y * right;
+    result.z = left.z * right;
+    result.w = left.w * right;
+    return result;
+}
+
+static v4 operator*(r32 left, v4 right){
+    return right * left;
+}
+
+static v4 operator-(v4& vector){
+    return v4(-vector.x, -vector.y, -vector.z, -vector.w);
+}
+
+static v4 operator+(v4 left, v4 right){
+    return v4(left.x + right.x, left.y + right.y, left.z + right.z, left.w + right.w);
+}
+
+static v4 operator-(v4 left, v4 right){
+    return v4(left.x - right.x, left.y - right.y, left.z - right.z, left.w - right.w);
+}
+
+static void operator+=(v4& left, v4 right){
     left = left + right;
 }
 
-void operator+=(v2& left, v2 right){
+static void operator+=(v3& left, v3 right){
     left = left + right;
 }
 
-void operator-=(v3& left, v3 right){
+static void operator+=(v2& left, v2 right){
+    left = left + right;
+}
+
+static void operator-=(v4& left, v4 right){
     left = left - right;
 }
 
-r32 length(v3 vector){
+static void operator-=(v3& left, v3 right){
+    left = left - right;
+}
+
+static r32 length(v3 vector){
     r32 result = 0;
     result = sqrt(vector.x * vector.x + vector.y * vector.y + vector.z * vector.z);
     return result;
 }
 
-v3 normalize(v3 vector){
+static v3 normalize(v3 vector){
     r32 magnitude = length(vector);
     return v3(vector.x / magnitude, vector.y / magnitude, vector.z / magnitude);
 }
 
-v3 cross(v3 left, v3 right){
+static v3 cross(v3 left, v3 right){
     v3 result = v3();
     result.x = left.y * right.z - left.z * right.y;
     result.y = left.z * right.x - left.x * right.z;
@@ -210,7 +248,7 @@ v3 cross(v3 left, v3 right){
     return result;
 }
 
-m4 lookAt(v3 up, v3 position, v3 target){
+static m4 lookAt(v3 up, v3 position, v3 target){
     m4 result = m4();
 
     v3 forward = normalize(target - position);
@@ -234,7 +272,7 @@ m4 lookAt(v3 up, v3 position, v3 target){
     return result;
 }
 
-m4 inverse(m4 matrix){
+static m4 inverse(m4 matrix){
     m4 result = m4();
 
     result.m[0] =
@@ -417,7 +455,7 @@ bottom * b = -1 => b = -(1 / bottom)
 
 
 
-m4 orthographic(r32 left, r32 right, r32 top, r32 bottom){
+static m4 orthographic(r32 left, r32 right, r32 top, r32 bottom){
     m4 result = m4();
 
     result.m[0] = 2.0 / (right - left);
@@ -429,14 +467,6 @@ m4 orthographic(r32 left, r32 right, r32 top, r32 bottom){
     return result;
 }
 
-i32 clamp(i32 value, i32 min, i32 max){
-    if(value < min){
-        return min;
-    } else if (value > max) {
-        return max;
-    }
-    return value;
-}
 
 #if 0
     result.m[0] = right.x;
@@ -461,7 +491,15 @@ i32 clamp(i32 value, i32 min, i32 max){
 
 #endif
 
-v3 lerp(v3 start, v3 end, r32 time){
+static r32 lerp(r32 start, r32 end, r32 time){
+    return (start + (end - start) * time);
+}
+
+static v3 lerp(v3 start, v3 end, r32 time){
+    return (start + (end - start) * time);
+}
+
+static v4 lerp(v4 start, v4 end, r32 time){
     return (start + (end - start) * time);
 }
 

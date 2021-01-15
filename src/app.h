@@ -5,6 +5,7 @@
 #include "panel.h"
 #include "panel_actions.h"
 #include "panel_updates.h"
+#include "editor_file_pool.h"
 
 struct ApplicationLayoutData {
     bool scheduleChangeInSize;
@@ -14,10 +15,14 @@ struct ApplicationLayoutData {
 
     u32 windowCount;
     EditorWindow windows[2];
+    EditorWindow layoutWindows[2];
+
+    EditorFilePool filePool;
 
     u32 currentWindowIndex;
     EditorWindow* currentWindow;
     GapBuffer* currentBuffer;
 
     PanelGroup panelGroup;
-};
+};  
+ 

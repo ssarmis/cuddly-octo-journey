@@ -42,6 +42,11 @@ void eventTick(bool* done, LayoutEvent* layoutEvent, KeyboardManager* keyboardMa
                             }
                             break;
 
+                        case SDL_SCANCODE_LALT: case SDL_SCANCODE_RALT: {
+                                keyboardManager->currentActiveKeyStroke &= ~KEY_ALT;
+                            }
+                            break;
+
                         case SDL_SCANCODE_LGUI: case SDL_SCANCODE_RGUI: {
                                 keyboardManager->currentActiveKeyStroke &= ~KEY_CMD;
                             }
@@ -134,6 +139,11 @@ void eventTick(bool* done, LayoutEvent* layoutEvent, KeyboardManager* keyboardMa
                     switch (event.key.keysym.scancode) {
                         case SDL_SCANCODE_ESCAPE: {
                                 keyboardManager->currentActiveKeyStroke |= KEY_ESCAPE;
+                            }
+                            break;
+
+                        case SDL_SCANCODE_LALT: case SDL_SCANCODE_RALT: {
+                                keyboardManager->currentActiveKeyStroke |= KEY_ALT;
                             }
                             break;
 

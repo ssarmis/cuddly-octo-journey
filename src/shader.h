@@ -1,6 +1,7 @@
 #pragma once
 
 #include "general.h"
+#include "math.h"
 #include "gl.h"
 
 #include "shader.sources"
@@ -39,19 +40,19 @@ struct Shader {
     UniformLocations locations;
 };
 
-OpenGLString shaderGetLog(GLuint shader){
+static OpenGLString shaderGetLog(GLuint shader){
     OpenGLString result = {};
     glGetShaderInfoLog(shader, KB(1), &result.length, result.buffer);
     return result;
 }
 
-OpenGLString programGetLog(GLuint program){
+static OpenGLString programGetLog(GLuint program){
     OpenGLString result = {};
     glGetProgramInfoLog(program, KB(1), &result.length, result.buffer);
     return result;
 }
 
-GLuint compileShader(GLenum type, const char* source){
+static GLuint compileShader(GLenum type, const char* source){
     ASSERT(source);
     GLuint result = glCreateShader(type);
     glShaderSource(result, 1, &source, NULL);
@@ -70,17 +71,17 @@ GLuint compileShader(GLenum type, const char* source){
     return result;
 }
 
-GLuint createProgram(){
+static GLuint createProgram(){
     return glCreateProgram();
 }
 
-GLint shaderGetUniformLocation(GLuint program, const char* name){
+static GLint shaderGetUniformLocation(GLuint program, const char* name){
     GLint location = glGetUniformLocation(program, name);
     ASSERT(location != -1);
     return location;
 }
 
-GLuint createAndLinkProgram(u8 shaderAmount, GLuint* shaderIds){
+static GLuint createAndLinkProgram(u8 shaderAmount, GLuint* shaderIds){
     GLuint result = createProgram();
 
     for(int i = 0; i < shaderAmount; ++i){
@@ -100,7 +101,7 @@ GLuint createAndLinkProgram(u8 shaderAmount, GLuint* shaderIds){
     return result;
 }
 
-Shader createShader(const char* vertexShader, const char* fragmentShader){
+static Shader createShader(const char* vertexShader, const char* fragmentShader){
     Shader result = {};
 
     result.vertexShaderId = compileShader(GL_VERTEX_SHADER, vertexShader);
@@ -121,18 +122,18 @@ Shader createShader(const char* vertexShader, const char* fragmentShader){
     return result;
 }
 
-Shader createShader(){
+static Shader createShader(){
     return createShader(VERTEX_SOURCE, FRAGMENT_SOURCE);
 }
 
-Shader createShaderCursor(){
+static Shader createShaderCursor(){
     return createShader(VERTEX_CURSOR_SOURCE, FRAGMENT_CURSOR_SOURCE);
 }
 
-void shaderSetUniform4m(GLint location, m4 matrix){
+static void shaderSetUniform4m(GLint location, m4 matrix){
     glUniformMatrix4fv(location, 1, GL_TRUE, matrix.m);
 }
 
-void shaderSetUniform32u(GLuint location, u32 value){
+static void shaderSetUniform32u(GLuint location, u32 value){
     glUniform1ui(location, value);
 }
