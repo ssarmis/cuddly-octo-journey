@@ -140,6 +140,9 @@ bool quickOpenFileTick(void* data0, void* data1){
         // actually clean so do something about that...
         cleanSuggestionBuffer(panel->suggestions);
         panel->suggestions = quickOpenFileGenerateSuggestions(applicationLayoutData, &panel->buffer);
+        // for(int i = 0; i < panel->suggestions.currentAmount; ++i){
+        //     printf("%s %d\n", panel->suggestions[i].name, panel->suggestions[i].score);
+        // }
     } else if(keyboardManager->currentActiveKeyStroke & KEY_TAB){
         if(panel->suggestions.currentAmount >= 1){
             // not the best way, but I am too lazy to fix my gap buffer

@@ -81,10 +81,24 @@ int main(int argumentCount, char* arguments[]){
 
     applicationLayoutData.currentWindowIndex = 0;
     applicationLayoutData.currentWindow = &applicationLayoutData.windows[0];
-    applicationLayoutData.currentBuffer = &applicationLayoutData.currentWindow->buffer;
+    applicationLayoutData.currentBuffer = &applicationLayoutData.currentWindow->currentFile->buffer;
 
+    EditorFile* bufferFile[2];
+    bufferFile[0] = new EditorFile();
+    bufferFile[1] = new EditorFile();
 
-    gapInsertNullTerminatedStringAt(&applicationLayoutData.windows[1].buffer, R"(
+    bufferFile[0]->buffer = gapCreateEmpty();
+    bufferFile[0]->filename.data = NULL;
+    bufferFile[0]->fullPath.data = NULL;
+
+    bufferFile[1]->buffer = gapCreateEmpty();
+    bufferFile[1]->filename.data = NULL;
+    bufferFile[1]->fullPath.data = NULL;
+
+    applicationLayoutData.windows[0].currentFile = bufferFile[0];
+    applicationLayoutData.windows[1].currentFile = bufferFile[1];
+
+    gapInsertNullTerminatedStringAt(&applicationLayoutData.windows[1].currentFile->buffer, R"(
 ********************************************************************
 
                     uwu Welcome to my editor
@@ -160,10 +174,9 @@ int main(int argumentCount, char* arguments[]){
 
 	
     if(argumentCount > 1){
-        applicationLayoutData.currentWindow->buffer = gapReadFile(arguments[1]);
+        applicationLayoutData.currentWindow->currentFile->buffer = gapReadFile(arguments[1]);
     } else {
         applicationLayoutData.filePool = editorFilePoolLoadAllFilesFromDirectory(".", true);
-        applicationLayoutData.currentWindow->buffer = gapCreateEmpty();
     }
 
     // TODO(Sarmis) make initialization for these
@@ -295,7 +308,7 @@ int main(int argumentCount, char* arguments[]){
                     time, applicationLayoutData.windowWidth, applicationLayoutData.windowHeight);
             }
         } else if(applicationLayoutData.currentBuffer == &applicationLayoutData.panelGroup.panel.buffer){
-            applicationLayoutData.currentBuffer = &applicationLayoutData.currentWindow->buffer;
+            applicationLayoutData.currentBuffer = &applicationLayoutData.currentWindow->currentFile->buffer;
         }
         
         SDL_GL_SwapWindow(window);

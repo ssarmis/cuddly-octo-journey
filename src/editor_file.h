@@ -29,3 +29,14 @@ static EditorFile editorFileReadFile(char* filename){
 
     return result;
 }
+
+static EditorFile* getEditorFileByFullPath(Buffer<EditorFile> buffer, String string){
+    EditorFile* result = NULL;
+    for(int i = 0; i < buffer.currentAmount; ++i){
+        if(buffer[i].fullPath == string){
+            return &buffer[i];
+        }
+    }
+
+    return result;
+}

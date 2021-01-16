@@ -6,64 +6,64 @@
 void editorWindowKeyActionRemoveCharacterBeforeCursor(void* data){
     EditorWindow* window = (EditorWindow*) data;
     
-    if(gapGetSelectionSize(&window->buffer)){
-        String removedString = gapGetSubString(&window->buffer, window->buffer.selection.start, window->buffer.selection.end);
-        editorWindowAppendRemoveAction(window, removedString, window->buffer.selection.start);
+    if(gapGetSelectionSize(&window->currentFile->buffer)){
+        String removedString = gapGetSubString(&window->currentFile->buffer, window->currentFile->buffer.selection.start, window->currentFile->buffer.selection.end);
+        editorWindowAppendRemoveAction(window, removedString, window->currentFile->buffer.selection.start);
 
-        gapRemoveCharactersInRange(&window->buffer, window->buffer.selection.start, window->buffer.selection.end);
-        window->buffer.cursor = window->buffer.selection.start;
-        window->buffer.selection.end = window->buffer.selection.start;
+        gapRemoveCharactersInRange(&window->currentFile->buffer, window->currentFile->buffer.selection.start, window->currentFile->buffer.selection.end);
+        window->currentFile->buffer.cursor = window->currentFile->buffer.selection.start;
+        window->currentFile->buffer.selection.end = window->currentFile->buffer.selection.start;
     } else {
-        if(window->buffer.cursor - 1 >= 0){
-            String removedString = gapGetSubString(&window->buffer, window->buffer.cursor - 1, window->buffer.cursor);
-            editorWindowAppendRemoveAction(window, removedString, window->buffer.cursor - 1);
+        if(window->currentFile->buffer.cursor - 1 >= 0){
+            String removedString = gapGetSubString(&window->currentFile->buffer, window->currentFile->buffer.cursor - 1, window->currentFile->buffer.cursor);
+            editorWindowAppendRemoveAction(window, removedString, window->currentFile->buffer.cursor - 1);
 
-            gapRemoveCharacterAt(&window->buffer, window->buffer.cursor);
+            gapRemoveCharacterAt(&window->currentFile->buffer, window->currentFile->buffer.cursor);
         }
     }
 
-    gapDecreaseCursor(&window->buffer);
+    gapDecreaseCursor(&window->currentFile->buffer);
 }
 
 void editorWindowKeyActionRemoveCharacterOnCursor(void* data){
     EditorWindow* window = (EditorWindow*) data;
 
-    if(gapGetSelectionSize(&window->buffer)){
-        String removedString = gapGetSubString(&window->buffer, window->buffer.selection.start, window->buffer.selection.end);
-        editorWindowAppendRemoveAction(window, removedString, window->buffer.selection.start);
+    if(gapGetSelectionSize(&window->currentFile->buffer)){
+        String removedString = gapGetSubString(&window->currentFile->buffer, window->currentFile->buffer.selection.start, window->currentFile->buffer.selection.end);
+        editorWindowAppendRemoveAction(window, removedString, window->currentFile->buffer.selection.start);
 
-        gapRemoveCharactersInRange(&window->buffer, window->buffer.selection.start, window->buffer.selection.end);
-        window->buffer.cursor = window->buffer.selection.start;
-        window->buffer.selection.end = window->buffer.selection.start;
+        gapRemoveCharactersInRange(&window->currentFile->buffer, window->currentFile->buffer.selection.start, window->currentFile->buffer.selection.end);
+        window->currentFile->buffer.cursor = window->currentFile->buffer.selection.start;
+        window->currentFile->buffer.selection.end = window->currentFile->buffer.selection.start;
     } else {
-        if(window->buffer.cursor + 1 < gapGetAbstractSize(&window->buffer)){
-            String removedString = gapGetSubString(&window->buffer, window->buffer.cursor, window->buffer.cursor + 1);
-            editorWindowAppendRemoveAction(window, removedString, window->buffer.cursor);
+        if(window->currentFile->buffer.cursor + 1 < gapGetAbstractSize(&window->currentFile->buffer)){
+            String removedString = gapGetSubString(&window->currentFile->buffer, window->currentFile->buffer.cursor, window->currentFile->buffer.cursor + 1);
+            editorWindowAppendRemoveAction(window, removedString, window->currentFile->buffer.cursor);
 
-            gapRemoveCharacterNearAt(&window->buffer, window->buffer.cursor);
+            gapRemoveCharacterNearAt(&window->currentFile->buffer, window->currentFile->buffer.cursor);
         }
     }
     
 }
 
 inline void editorWindowMoveCursorToBegginingOfLine(EditorWindow* window){
-    i32 old = window->buffer.cursor;
-    gapSeekCursorToPreviousNewline(&window->buffer);
-    if(old == window->buffer.cursor){
+    i32 old = window->currentFile->buffer.cursor;
+    gapSeekCursorToPreviousNewline(&window->currentFile->buffer);
+    if(old == window->currentFile->buffer.cursor){
         // we don't need to do anything, this thing didn't move at all
         return;
     }
 
-    if(gapGetCursorCharacter(&window->buffer) == '\n' || gapGetCursorCharacter(&window->buffer) == '\r'){
-        gapIncreaseCursor(&window->buffer);
+    if(gapGetCursorCharacter(&window->currentFile->buffer) == '\n' || gapGetCursorCharacter(&window->currentFile->buffer) == '\r'){
+        gapIncreaseCursor(&window->currentFile->buffer);
     }
 }
 
 inline void editorWindowMoveCursorToEndOfLine(EditorWindow* window){
-    if(gapGetCursorCharacter(&window->buffer) == '\n' || gapGetCursorCharacter(&window->buffer) == '\r'){
+    if(gapGetCursorCharacter(&window->currentFile->buffer) == '\n' || gapGetCursorCharacter(&window->currentFile->buffer) == '\r'){
         return;
     }
-    gapSeekCursorToNewline(&window->buffer);
+    gapSeekCursorToNewline(&window->currentFile->buffer);
 }
 
 void editorWindowKeyActionMoveCursorToBegginingOfLine(void* data){
@@ -71,8 +71,8 @@ void editorWindowKeyActionMoveCursorToBegginingOfLine(void* data){
     
     editorWindowMoveCursorToBegginingOfLine(window);
     
-    if(gapGetSelectionSize(&window->buffer)){
-        window->buffer.selection.end = window->buffer.selection.start;
+    if(gapGetSelectionSize(&window->currentFile->buffer)){
+        window->currentFile->buffer.selection.end = window->currentFile->buffer.selection.start;
     }
 }
 
@@ -81,47 +81,47 @@ void editorWindowKeyActionMoveCursorToEndOfLine(void* data){
     
     editorWindowMoveCursorToEndOfLine(window);
     
-    if(gapGetSelectionSize(&window->buffer)){
-        window->buffer.selection.end = window->buffer.selection.start;
+    if(gapGetSelectionSize(&window->currentFile->buffer)){
+        window->currentFile->buffer.selection.end = window->currentFile->buffer.selection.start;
     }
 }
 
 inline void editorWindowMoveCursorToAboveLine(EditorWindow* window){
-    i32 distanceOnCurrentLineToBegging = gapGetDistanceFromPreviousNewline(&window->buffer);;
+    i32 distanceOnCurrentLineToBegging = gapGetDistanceFromPreviousNewline(&window->currentFile->buffer);;
     
     if(!distanceOnCurrentLineToBegging){
-        gapSeekCursorToPreviousNewline(&window->buffer);
-        gapSeekCursorToPreviousNewline(&window->buffer);
+        gapSeekCursorToPreviousNewline(&window->currentFile->buffer);
+        gapSeekCursorToPreviousNewline(&window->currentFile->buffer);
 
-        gapIncreaseCursor(&window->buffer);
+        gapIncreaseCursor(&window->currentFile->buffer);
     } else {
-        gapSeekCursorToPreviousNewline(&window->buffer);
+        gapSeekCursorToPreviousNewline(&window->currentFile->buffer);
 
-        i32 clone = window->buffer.cursor;
-        gapDecreaseCursor(&window->buffer);
+        i32 clone = window->currentFile->buffer.cursor;
+        gapDecreaseCursor(&window->currentFile->buffer);
 
-        i32 lengthOfAboveLine = gapGetDistanceFromPreviousNewline(&window->buffer);
+        i32 lengthOfAboveLine = gapGetDistanceFromPreviousNewline(&window->currentFile->buffer);
         if(!lengthOfAboveLine){
-            window->buffer.cursor = clone;
+            window->currentFile->buffer.cursor = clone;
         } else if(lengthOfAboveLine > 0 && lengthOfAboveLine > distanceOnCurrentLineToBegging){
-            gapSeekCursor(&window->buffer, -(lengthOfAboveLine - distanceOnCurrentLineToBegging));
+            gapSeekCursor(&window->currentFile->buffer, -(lengthOfAboveLine - distanceOnCurrentLineToBegging));
         }
     }
 }
 
 inline void editorWindowMoveCursorToBelowLine(EditorWindow* window){
-	    i32 distanceOnCurrentLineToBegging = gapGetDistanceFromPreviousNewline(&window->buffer);
+	    i32 distanceOnCurrentLineToBegging = gapGetDistanceFromPreviousNewline(&window->currentFile->buffer);
 
     if(!distanceOnCurrentLineToBegging){
-        if(isSpacingCharacter(gapGetCursorCharacter(&window->buffer))){
-            gapIncreaseCursor(&window->buffer);
+        if(isSpacingCharacter(gapGetCursorCharacter(&window->currentFile->buffer))){
+            gapIncreaseCursor(&window->currentFile->buffer);
         } else {
-            gapSeekCursorToNewline(&window->buffer);
-            gapIncreaseCursor(&window->buffer);
+            gapSeekCursorToNewline(&window->currentFile->buffer);
+            gapIncreaseCursor(&window->currentFile->buffer);
         }
     } else {
-        gapSeekCursorToNewline(&window->buffer);
-        gapSeekCursor(&window->buffer, distanceOnCurrentLineToBegging);
+        gapSeekCursorToNewline(&window->currentFile->buffer);
+        gapSeekCursor(&window->currentFile->buffer, distanceOnCurrentLineToBegging);
     }
 }
 
@@ -130,8 +130,8 @@ void editorWindowKeyActionMoveCursorToAboveLine(void* data){
 
     editorWindowMoveCursorToAboveLine(window);
     
-    if(gapGetSelectionSize(&window->buffer)){
-        window->buffer.selection.end = window->buffer.selection.start;
+    if(gapGetSelectionSize(&window->currentFile->buffer)){
+        window->currentFile->buffer.selection.end = window->currentFile->buffer.selection.start;
     }
 }
 
@@ -140,27 +140,27 @@ void editorWindowKeyActionMoveCursorToBelowLine(void* data){
     
     editorWindowMoveCursorToBelowLine(window);
 
-    if(gapGetSelectionSize(&window->buffer)){
-        window->buffer.selection.end = window->buffer.selection.start;
+    if(gapGetSelectionSize(&window->currentFile->buffer)){
+        window->currentFile->buffer.selection.end = window->currentFile->buffer.selection.start;
     }
 }
 
 void editorWindowKeyActionMoveCursorLeft(void* data){
     EditorWindow* window = (EditorWindow*) data;
-    gapDecreaseCursor(&window->buffer);
+    gapDecreaseCursor(&window->currentFile->buffer);
 
-    if(gapGetSelectionSize(&window->buffer)){
-	    window->buffer.selection.end = window->buffer.selection.start;
+    if(gapGetSelectionSize(&window->currentFile->buffer)){
+	    window->currentFile->buffer.selection.end = window->currentFile->buffer.selection.start;
     }
 }
 
 void editorWindowKeyActionMoveCursorRight(void* data){
     EditorWindow* window = (EditorWindow*) data;
-    gapIncreaseCursor(&window->buffer);
+    gapIncreaseCursor(&window->currentFile->buffer);
 
-    if(gapGetSelectionSize(&window->buffer)){
-        window->buffer.cursor = window->buffer.selection.end;
-        window->buffer.selection.end = window->buffer.selection.start;
+    if(gapGetSelectionSize(&window->currentFile->buffer)){
+        window->currentFile->buffer.cursor = window->currentFile->buffer.selection.end;
+        window->currentFile->buffer.selection.end = window->currentFile->buffer.selection.start;
     }
 }
 
@@ -181,8 +181,8 @@ void editorWindowKeyActionMoveCursor10LinesUp(void* data){
     
     editorWindowMoveCursor10LinesUp(window);
 
-    if(gapGetSelectionSize(&window->buffer)){
-        window->buffer.selection.end = window->buffer.selection.start;
+    if(gapGetSelectionSize(&window->currentFile->buffer)){
+        window->currentFile->buffer.selection.end = window->currentFile->buffer.selection.start;
     }
 }
 
@@ -191,21 +191,21 @@ void editorWindowKeyActionMoveCursor10LinesDown(void* data){
 
     editorWindowMoveCursor10LinesDown(window);
 
-    if(gapGetSelectionSize(&window->buffer)){
-        window->buffer.selection.end = window->buffer.selection.start;
+    if(gapGetSelectionSize(&window->currentFile->buffer)){
+        window->currentFile->buffer.selection.end = window->currentFile->buffer.selection.start;
     }
 }
 
 inline void editorWindowMoveCursorOverWordLeft(EditorWindow* window){
-    i32 clone = window->buffer.cursor;
-    gapSeekCursorToPreviousSymbolOrSpace(&window->buffer);
-    if(clone == window->buffer.cursor){
-        gapDecreaseCursor(&window->buffer);
+    i32 clone = window->currentFile->buffer.cursor;
+    gapSeekCursorToPreviousSymbolOrSpace(&window->currentFile->buffer);
+    if(clone == window->currentFile->buffer.cursor){
+        gapDecreaseCursor(&window->currentFile->buffer);
     }
 }
 
 inline void editorWindowMoveCursorOverWordRight(EditorWindow* window){
-    gapSeekCursorToSymbolOrSpace(&window->buffer);
+    gapSeekCursorToSymbolOrSpace(&window->currentFile->buffer);
 }
 
 void editorWindowKeyActionMoveCursorOverWordLeft(void* data){
@@ -213,8 +213,8 @@ void editorWindowKeyActionMoveCursorOverWordLeft(void* data){
 
     editorWindowMoveCursorOverWordLeft(window);
     
-    if(gapGetSelectionSize(&window->buffer)){
-        window->buffer.selection.end = window->buffer.selection.start;
+    if(gapGetSelectionSize(&window->currentFile->buffer)){
+        window->currentFile->buffer.selection.end = window->currentFile->buffer.selection.start;
     }
 }
 
@@ -223,8 +223,8 @@ void editorWindowKeyActionMoveCursorOverWordRight(void* data){
     
     editorWindowMoveCursorOverWordRight(window);
 
-    if(gapGetSelectionSize(&window->buffer)){
-        window->buffer.selection.end = window->buffer.selection.start;
+    if(gapGetSelectionSize(&window->currentFile->buffer)){
+        window->currentFile->buffer.selection.end = window->currentFile->buffer.selection.start;
     }
 }
 
@@ -232,52 +232,52 @@ void editorWindowKeyActionMoveCursorOverWordRight(void* data){
 void editorWindowKeyActionRemoveWordLeft(void* data){
     EditorWindow* window = (EditorWindow*) data;
 
-    i32 end = window->buffer.cursor;
+    i32 end = window->currentFile->buffer.cursor;
     editorWindowMoveCursorOverWordLeft(window);
-    i32 start = window->buffer.cursor;
+    i32 start = window->currentFile->buffer.cursor;
 
     if(start == end){
         return;
     }
 
-    if(start < 0 || end > gapGetAbstractSize(&window->buffer)){
+    if(start < 0 || end > gapGetAbstractSize(&window->currentFile->buffer)){
         return;
     }        
 
-    String removedString = gapGetSubString(&window->buffer, start, end);
+    String removedString = gapGetSubString(&window->currentFile->buffer, start, end);
     editorWindowAppendRemoveAction(window, removedString, start);
 
-    gapRemoveCharactersInRange(&window->buffer, start, end);
-    window->buffer.cursor = start;
+    gapRemoveCharactersInRange(&window->currentFile->buffer, start, end);
+    window->currentFile->buffer.cursor = start;
 
-    if(gapGetSelectionSize(&window->buffer)){
-        window->buffer.selection.end = window->buffer.selection.start;
+    if(gapGetSelectionSize(&window->currentFile->buffer)){
+        window->currentFile->buffer.selection.end = window->currentFile->buffer.selection.start;
     }
 }
 
 void editorWindowKeyActionRemoveWordRight(void* data){
     EditorWindow* window = (EditorWindow*) data;
 
-    u32 start = window->buffer.cursor;
+    u32 start = window->currentFile->buffer.cursor;
     editorWindowMoveCursorOverWordRight(window);
-    u32 end = window->buffer.cursor;
+    u32 end = window->currentFile->buffer.cursor;
 
     if(start == end){
         return;
     }
 
-    if(start < 0 || end > gapGetAbstractSize(&window->buffer)){
+    if(start < 0 || end > gapGetAbstractSize(&window->currentFile->buffer)){
         return;
     }        
 
-    String removedString = gapGetSubString(&window->buffer, start, end);
+    String removedString = gapGetSubString(&window->currentFile->buffer, start, end);
     editorWindowAppendRemoveAction(window, removedString, start);
 
-    gapRemoveCharactersInRange(&window->buffer, start, end);
-    window->buffer.cursor = start;
+    gapRemoveCharactersInRange(&window->currentFile->buffer, start, end);
+    window->currentFile->buffer.cursor = start;
 
-    if(gapGetSelectionSize(&window->buffer)){
-        window->buffer.selection.end = window->buffer.selection.start;
+    if(gapGetSelectionSize(&window->currentFile->buffer)){
+        window->currentFile->buffer.selection.end = window->currentFile->buffer.selection.start;
     }
 }
 
@@ -286,7 +286,7 @@ void editorWindowKeyActionMoveCursorOnePageDown(void* data){
     EditorWindow* window = (EditorWindow*) data;
 
     u32 heightInLines = window->height / FONT_HEIGHT;
-    // gapSeekCursorINewlinesIfPossible(&window->buffer, heightInLines);
+    // gapSeekCursorINewlinesIfPossible(&window->currentFile->buffer, heightInLines);
     for(int i = 0; i < heightInLines; ++i){
         editorWindowKeyActionMoveCursorToBelowLine(window);
     }
@@ -296,7 +296,7 @@ void editorWindowKeyActionMoveCursorOnePageUp(void* data){
     EditorWindow* window = (EditorWindow*) data;
 
     u32 heightInLines = window->height / FONT_HEIGHT;
-    // gapSeekCursorINewlinesIfPossible(&window->buffer, -heightInLines);
+    // gapSeekCursorINewlinesIfPossible(&window->currentFile->buffer, -heightInLines);
     for(int i = 0; i < heightInLines; ++i){
         editorWindowKeyActionMoveCursorToAboveLine(window);
     }
@@ -305,42 +305,42 @@ void editorWindowKeyActionMoveCursorOnePageUp(void* data){
 void editorWindowKeyActionMoveCursorAndSelectToAboveLine(void* data){
     EditorWindow* window = (EditorWindow*) data;
 
-    i32 selectionSize = gapGetSelectionSize(&window->buffer);
+    i32 selectionSize = gapGetSelectionSize(&window->currentFile->buffer);
 
     if(selectionSize){
         // NOTE(Sarmis) we already have a selection going on, so, just move the end
-        if(window->buffer.selection.start == window->buffer.cursor){
+        if(window->currentFile->buffer.selection.start == window->currentFile->buffer.cursor){
             editorWindowMoveCursorToAboveLine(window);
-            window->buffer.selection.start = window->buffer.cursor;
+            window->currentFile->buffer.selection.start = window->currentFile->buffer.cursor;
         } else {
             editorWindowMoveCursorToAboveLine(window);
-            window->buffer.selection.end = window->buffer.cursor;
+            window->currentFile->buffer.selection.end = window->currentFile->buffer.cursor;
         }
     } else {
-        window->buffer.selection.end = window->buffer.cursor;
+        window->currentFile->buffer.selection.end = window->currentFile->buffer.cursor;
         editorWindowMoveCursorToAboveLine(window);
-        window->buffer.selection.start = window->buffer.cursor;
+        window->currentFile->buffer.selection.start = window->currentFile->buffer.cursor;
     }
 }
 
 void editorWindowKeyActionMoveCursorAndSelectToBelowLine(void* data){
     EditorWindow* window = (EditorWindow*) data;
 
-    i32 selectionSize = gapGetSelectionSize(&window->buffer);
+    i32 selectionSize = gapGetSelectionSize(&window->currentFile->buffer);
 
     if(selectionSize){
         // NOTE(Sarmis) we already have a selection going on, so, just move the end
-        if(window->buffer.selection.start == window->buffer.cursor){
+        if(window->currentFile->buffer.selection.start == window->currentFile->buffer.cursor){
             editorWindowMoveCursorToBelowLine(window);
-            window->buffer.selection.start = window->buffer.cursor;
+            window->currentFile->buffer.selection.start = window->currentFile->buffer.cursor;
         } else {
             editorWindowMoveCursorToBelowLine(window);
-            window->buffer.selection.end = window->buffer.cursor;
+            window->currentFile->buffer.selection.end = window->currentFile->buffer.cursor;
         }
     } else {
-        window->buffer.selection.start = window->buffer.cursor;
+        window->currentFile->buffer.selection.start = window->currentFile->buffer.cursor;
         editorWindowMoveCursorToBelowLine(window);
-        window->buffer.selection.end = window->buffer.cursor;
+        window->currentFile->buffer.selection.end = window->currentFile->buffer.cursor;
     }
 }
 
@@ -348,238 +348,238 @@ void editorWindowKeyActionMoveCursorAndSelectToBelowLine(void* data){
 void editorWindowKeyActionMoveCursorAndSelectLeft(void* data){
     EditorWindow* window = (EditorWindow*) data;
 
-    i32 selectionSize = gapGetSelectionSize(&window->buffer);
+    i32 selectionSize = gapGetSelectionSize(&window->currentFile->buffer);
 
     if(selectionSize){
         // NOTE(Sarmis) we already have a selection going on, so, just move the end
-        if(window->buffer.selection.start == window->buffer.cursor){
+        if(window->currentFile->buffer.selection.start == window->currentFile->buffer.cursor){
             // we are at the start of selection
-            gapDecreaseCursor(&window->buffer);
-            window->buffer.selection.start = window->buffer.cursor;
+            gapDecreaseCursor(&window->currentFile->buffer);
+            window->currentFile->buffer.selection.start = window->currentFile->buffer.cursor;
         } else {
             // we are at the end of selection
-            gapDecreaseCursor(&window->buffer);
-            window->buffer.selection.end = window->buffer.cursor;
+            gapDecreaseCursor(&window->currentFile->buffer);
+            window->currentFile->buffer.selection.end = window->currentFile->buffer.cursor;
         }
     } else {
-        window->buffer.selection.end = window->buffer.cursor;
-        gapDecreaseCursor(&window->buffer);
-        window->buffer.selection.start = window->buffer.cursor;
+        window->currentFile->buffer.selection.end = window->currentFile->buffer.cursor;
+        gapDecreaseCursor(&window->currentFile->buffer);
+        window->currentFile->buffer.selection.start = window->currentFile->buffer.cursor;
     }
 }
 
 void editorWindowKeyActionMoveCursorAndSelectRight(void* data){
     EditorWindow* window = (EditorWindow*) data;
 
-    i32 selectionSize = gapGetSelectionSize(&window->buffer);
+    i32 selectionSize = gapGetSelectionSize(&window->currentFile->buffer);
 
     if(selectionSize){
         // NOTE(Sarmis) we already have a selection going on, so, just move the end
-        if(window->buffer.selection.start == window->buffer.cursor){
+        if(window->currentFile->buffer.selection.start == window->currentFile->buffer.cursor){
             // we are at the start of selection
-            gapIncreaseCursor(&window->buffer);
-            window->buffer.selection.start = window->buffer.cursor;
+            gapIncreaseCursor(&window->currentFile->buffer);
+            window->currentFile->buffer.selection.start = window->currentFile->buffer.cursor;
         } else {
             // we are at the end of selection
-            gapIncreaseCursor(&window->buffer);
-            window->buffer.selection.end = window->buffer.cursor;
+            gapIncreaseCursor(&window->currentFile->buffer);
+            window->currentFile->buffer.selection.end = window->currentFile->buffer.cursor;
         }
     } else {
-        window->buffer.selection.start = window->buffer.cursor;
-        gapIncreaseCursor(&window->buffer);
-        window->buffer.selection.end = window->buffer.cursor;
+        window->currentFile->buffer.selection.start = window->currentFile->buffer.cursor;
+        gapIncreaseCursor(&window->currentFile->buffer);
+        window->currentFile->buffer.selection.end = window->currentFile->buffer.cursor;
     }
 }
 
 void editorWindowKeyActionMoveCursorAndSelect10LinesUp(void* data){
     EditorWindow* window = (EditorWindow*) data;
 
-    i32 selectionSize = gapGetSelectionSize(&window->buffer);
+    i32 selectionSize = gapGetSelectionSize(&window->currentFile->buffer);
 
     if(selectionSize){
         // NOTE(Sarmis) we already have a selection going on, so, just move the end
-        if(window->buffer.selection.start == window->buffer.cursor){
+        if(window->currentFile->buffer.selection.start == window->currentFile->buffer.cursor){
             editorWindowMoveCursor10LinesUp(window);
-            window->buffer.selection.start = window->buffer.cursor;
+            window->currentFile->buffer.selection.start = window->currentFile->buffer.cursor;
         } else {
             editorWindowMoveCursor10LinesUp(window);
-            window->buffer.selection.end = window->buffer.cursor;
+            window->currentFile->buffer.selection.end = window->currentFile->buffer.cursor;
         }
     } else {
-        window->buffer.selection.end = window->buffer.cursor;
+        window->currentFile->buffer.selection.end = window->currentFile->buffer.cursor;
         editorWindowMoveCursor10LinesUp(window);
-        window->buffer.selection.start = window->buffer.cursor;
+        window->currentFile->buffer.selection.start = window->currentFile->buffer.cursor;
     }
 }
 
 void editorWindowKeyActionMoveCursorAndSelect10LinesDown(void* data){
     EditorWindow* window = (EditorWindow*) data;
 
-    i32 selectionSize = gapGetSelectionSize(&window->buffer);
+    i32 selectionSize = gapGetSelectionSize(&window->currentFile->buffer);
 
     if(selectionSize){
         // NOTE(Sarmis) we already have a selection going on, so, just move the end
-        if(window->buffer.selection.start == window->buffer.cursor){
+        if(window->currentFile->buffer.selection.start == window->currentFile->buffer.cursor){
             editorWindowMoveCursor10LinesDown(window);
-            window->buffer.selection.start = window->buffer.cursor;
+            window->currentFile->buffer.selection.start = window->currentFile->buffer.cursor;
         } else {
             editorWindowMoveCursor10LinesDown(window);
-            window->buffer.selection.end = window->buffer.cursor;
+            window->currentFile->buffer.selection.end = window->currentFile->buffer.cursor;
         }
     } else {
-        window->buffer.selection.start = window->buffer.cursor;
+        window->currentFile->buffer.selection.start = window->currentFile->buffer.cursor;
         editorWindowMoveCursor10LinesDown(window);
-        window->buffer.selection.end = window->buffer.cursor;
+        window->currentFile->buffer.selection.end = window->currentFile->buffer.cursor;
     }
 }
 
 void editorWindowKeyActionMoveCursorAndSelectOverWordLeft(void* data){
     EditorWindow* window = (EditorWindow*) data;
 
-    i32 selectionSize = gapGetSelectionSize(&window->buffer);
+    i32 selectionSize = gapGetSelectionSize(&window->currentFile->buffer);
 
     if(selectionSize){
         // NOTE(Sarmis) we already have a selection going on, so, just move the end
-        if(window->buffer.selection.start == window->buffer.cursor){
+        if(window->currentFile->buffer.selection.start == window->currentFile->buffer.cursor){
             editorWindowMoveCursorOverWordLeft(window);
-            window->buffer.selection.start = window->buffer.cursor;
+            window->currentFile->buffer.selection.start = window->currentFile->buffer.cursor;
         } else {
             editorWindowMoveCursorOverWordLeft(window);
-            window->buffer.selection.end = window->buffer.cursor;
+            window->currentFile->buffer.selection.end = window->currentFile->buffer.cursor;
         }
     } else {
-        window->buffer.selection.end = window->buffer.cursor;
+        window->currentFile->buffer.selection.end = window->currentFile->buffer.cursor;
         editorWindowMoveCursorOverWordLeft(window);
-        window->buffer.selection.start = window->buffer.cursor;
+        window->currentFile->buffer.selection.start = window->currentFile->buffer.cursor;
     }
 }
 
 void editorWindowKeyActionMoveCursorAndSelectOverWordRight(void* data){
     EditorWindow* window = (EditorWindow*) data;
 
-    i32 selectionSize = gapGetSelectionSize(&window->buffer);
+    i32 selectionSize = gapGetSelectionSize(&window->currentFile->buffer);
 
     if(selectionSize){
         // NOTE(Sarmis) we already have a selection going on, so, just move the end
-        if(window->buffer.selection.start == window->buffer.cursor){
+        if(window->currentFile->buffer.selection.start == window->currentFile->buffer.cursor){
             editorWindowMoveCursorOverWordRight(window);
-            window->buffer.selection.start = window->buffer.cursor;
+            window->currentFile->buffer.selection.start = window->currentFile->buffer.cursor;
         } else {
             editorWindowMoveCursorOverWordRight(window);
-            window->buffer.selection.end = window->buffer.cursor;
+            window->currentFile->buffer.selection.end = window->currentFile->buffer.cursor;
         }
     } else {
-        window->buffer.selection.start = window->buffer.cursor;
+        window->currentFile->buffer.selection.start = window->currentFile->buffer.cursor;
         editorWindowMoveCursorOverWordRight(window);
-        window->buffer.selection.end = window->buffer.cursor;
+        window->currentFile->buffer.selection.end = window->currentFile->buffer.cursor;
     }
 }
 
 void editorWindowKeyActionMoveCursorAndSelectToBegginingOfLine(void* data){
     EditorWindow* window = (EditorWindow*) data;
 
-    i32 selectionSize = gapGetSelectionSize(&window->buffer);
+    i32 selectionSize = gapGetSelectionSize(&window->currentFile->buffer);
 
     if(selectionSize){
         // NOTE(Sarmis) we already have a selection going on, so, just move the end
-        if(window->buffer.selection.start == window->buffer.cursor){
+        if(window->currentFile->buffer.selection.start == window->currentFile->buffer.cursor){
             editorWindowMoveCursorToBegginingOfLine(window);
-            window->buffer.selection.start = window->buffer.cursor;
+            window->currentFile->buffer.selection.start = window->currentFile->buffer.cursor;
         } else {
             editorWindowMoveCursorToBegginingOfLine(window);
-            window->buffer.selection.end = window->buffer.cursor;
+            window->currentFile->buffer.selection.end = window->currentFile->buffer.cursor;
         }
         
-        if(window->buffer.selection.end < window->buffer.selection.start){
-            i32 aux = window->buffer.selection.end;
-            window->buffer.selection.end = window->buffer.selection.start;
-            window->buffer.selection.start = aux;
+        if(window->currentFile->buffer.selection.end < window->currentFile->buffer.selection.start){
+            i32 aux = window->currentFile->buffer.selection.end;
+            window->currentFile->buffer.selection.end = window->currentFile->buffer.selection.start;
+            window->currentFile->buffer.selection.start = aux;
         }
     } else {
-        window->buffer.selection.end = window->buffer.cursor;
+        window->currentFile->buffer.selection.end = window->currentFile->buffer.cursor;
         editorWindowMoveCursorToBegginingOfLine(window);
-        window->buffer.selection.start = window->buffer.cursor;
+        window->currentFile->buffer.selection.start = window->currentFile->buffer.cursor;
     }
 }
 
 void editorWindowKeyActionMoveCursorAndSelectOnePageDown(void* data){
     EditorWindow* window = (EditorWindow*) data;
 
-    i32 selectionSize = gapGetSelectionSize(&window->buffer);
+    i32 selectionSize = gapGetSelectionSize(&window->currentFile->buffer);
 
     if(selectionSize){
         // NOTE(Sarmis) we already have a selection going on, so, just move the end
-        if(window->buffer.selection.start == window->buffer.cursor){
+        if(window->currentFile->buffer.selection.start == window->currentFile->buffer.cursor){
             editorWindowKeyActionMoveCursorOnePageDown(window);
-            window->buffer.selection.start = window->buffer.cursor;
+            window->currentFile->buffer.selection.start = window->currentFile->buffer.cursor;
         } else {
             editorWindowKeyActionMoveCursorOnePageDown(window);
-            window->buffer.selection.end = window->buffer.cursor;
+            window->currentFile->buffer.selection.end = window->currentFile->buffer.cursor;
         }
         
-        if(window->buffer.selection.end < window->buffer.selection.start){
-            i32 aux = window->buffer.selection.end;
-            window->buffer.selection.end = window->buffer.selection.start;
-            window->buffer.selection.start = aux;
+        if(window->currentFile->buffer.selection.end < window->currentFile->buffer.selection.start){
+            i32 aux = window->currentFile->buffer.selection.end;
+            window->currentFile->buffer.selection.end = window->currentFile->buffer.selection.start;
+            window->currentFile->buffer.selection.start = aux;
         }
     } else {
-        window->buffer.selection.start = window->buffer.cursor;
+        window->currentFile->buffer.selection.start = window->currentFile->buffer.cursor;
         editorWindowKeyActionMoveCursorOnePageDown(window);
-        window->buffer.selection.end = window->buffer.cursor;
+        window->currentFile->buffer.selection.end = window->currentFile->buffer.cursor;
     }
 }
 
 void editorWindowKeyActionMoveCursorAndSelectOnePageUp(void* data){
     EditorWindow* window = (EditorWindow*) data;
 
-    i32 selectionSize = gapGetSelectionSize(&window->buffer);
+    i32 selectionSize = gapGetSelectionSize(&window->currentFile->buffer);
 
     if(selectionSize){
         // NOTE(Sarmis) we already have a selection going on, so, just move the end
-        if(window->buffer.selection.start == window->buffer.cursor){
+        if(window->currentFile->buffer.selection.start == window->currentFile->buffer.cursor){
             editorWindowKeyActionMoveCursorOnePageUp(window);
-            window->buffer.selection.start = window->buffer.cursor;
+            window->currentFile->buffer.selection.start = window->currentFile->buffer.cursor;
         } else {
             editorWindowKeyActionMoveCursorOnePageUp(window);
-            window->buffer.selection.end = window->buffer.cursor;
+            window->currentFile->buffer.selection.end = window->currentFile->buffer.cursor;
         }
         
-        if(window->buffer.selection.end < window->buffer.selection.start){
-            i32 aux = window->buffer.selection.end;
-            window->buffer.selection.end = window->buffer.selection.start;
-            window->buffer.selection.start = aux;
+        if(window->currentFile->buffer.selection.end < window->currentFile->buffer.selection.start){
+            i32 aux = window->currentFile->buffer.selection.end;
+            window->currentFile->buffer.selection.end = window->currentFile->buffer.selection.start;
+            window->currentFile->buffer.selection.start = aux;
         }
     } else {
-        window->buffer.selection.start = window->buffer.cursor;
+        window->currentFile->buffer.selection.start = window->currentFile->buffer.cursor;
         editorWindowKeyActionMoveCursorOnePageUp(window);
-        window->buffer.selection.end = window->buffer.cursor;
+        window->currentFile->buffer.selection.end = window->currentFile->buffer.cursor;
     }
 }
 
 void editorWindowKeyActionMoveCursorAndSelectToEndOfLine(void* data){
     EditorWindow* window = (EditorWindow*) data;
 
-    i32 selectionSize = gapGetSelectionSize(&window->buffer);
+    i32 selectionSize = gapGetSelectionSize(&window->currentFile->buffer);
 
     if(selectionSize){
         // NOTE(Sarmis) we already have a selection going on, so, just move the end
-        if(window->buffer.selection.start == window->buffer.cursor){
+        if(window->currentFile->buffer.selection.start == window->currentFile->buffer.cursor){
             editorWindowMoveCursorToEndOfLine(window);
-            window->buffer.selection.start = window->buffer.cursor;
+            window->currentFile->buffer.selection.start = window->currentFile->buffer.cursor;
         } else {
             editorWindowMoveCursorToEndOfLine(window);
-            window->buffer.selection.end = window->buffer.cursor;
+            window->currentFile->buffer.selection.end = window->currentFile->buffer.cursor;
         }
         
-        if(window->buffer.selection.end < window->buffer.selection.start){
-            i32 aux = window->buffer.selection.end;
-            window->buffer.selection.end = window->buffer.selection.start;
-            window->buffer.selection.start = aux;
+        if(window->currentFile->buffer.selection.end < window->currentFile->buffer.selection.start){
+            i32 aux = window->currentFile->buffer.selection.end;
+            window->currentFile->buffer.selection.end = window->currentFile->buffer.selection.start;
+            window->currentFile->buffer.selection.start = aux;
         }
     } else {
-        window->buffer.selection.start = window->buffer.cursor;
+        window->currentFile->buffer.selection.start = window->currentFile->buffer.cursor;
         editorWindowMoveCursorToEndOfLine(window);
-        window->buffer.selection.end = window->buffer.cursor;
+        window->currentFile->buffer.selection.end = window->currentFile->buffer.cursor;
     }
 }
 

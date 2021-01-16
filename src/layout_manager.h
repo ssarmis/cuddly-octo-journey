@@ -100,7 +100,7 @@ void layoutKeyActionChangeCurrentWindowToNext(void* data){
     applicationLayoutData->currentWindowIndex++;
     applicationLayoutData->currentWindowIndex %= applicationLayoutData->windowCount;
     applicationLayoutData->currentWindow = &applicationLayoutData->windows[applicationLayoutData->currentWindowIndex];
-    applicationLayoutData->currentBuffer = &applicationLayoutData->currentWindow->buffer;
+    applicationLayoutData->currentBuffer = &applicationLayoutData->currentWindow->currentFile->buffer;
 }
 
 void layoutKeyActionCloseActivePanel(void* data){
@@ -110,7 +110,7 @@ void layoutKeyActionCloseActivePanel(void* data){
         applicationLayoutData->panelGroup.panel.active = false;
         gapClean(&applicationLayoutData->panelGroup.panel.buffer);
     }
-    applicationLayoutData->currentBuffer = &applicationLayoutData->currentWindow->buffer;
+    applicationLayoutData->currentBuffer = &applicationLayoutData->currentWindow->currentFile->buffer;
 
     // reuse allocated space, don't deallocate
     applicationLayoutData->currentWindow->selections.currentAmount = 0;
@@ -141,8 +141,8 @@ void layoutKeyActionQuickOpenFilePanel(void* data){
 void layoutKeyActionSaveFilePanel(void* data){
     ApplicationLayoutData* applicationLayoutData = (ApplicationLayoutData*) data;
 
-    if(applicationLayoutData->currentWindow->buffer.filename){
-        gapWriteFile(&applicationLayoutData->currentWindow->buffer);
+    if(applicationLayoutData->currentWindow->currentFile->filename.data){
+        gapWriteFile(&applicationLayoutData->currentWindow->currentFile->buffer);
         applicationLayoutData->currentWindow->backgroundColor = {0, 0.1, 0, 1};
     } else {
         if(applicationLayoutData->panelGroup.panel.active){
@@ -174,7 +174,7 @@ void layoutKeyActionFindPanel(void* data){
     
     layoutInitializePanelToShow(applicationLayoutData, applicationLayoutData->panelGroup.findPanel);
     applicationLayoutData->panelGroup.panel.size.y = FONT_HEIGHT * 3;
-    applicationLayoutData->panelGroup.panel.lastFind = applicationLayoutData->currentWindow->buffer.cursor;
+    applicationLayoutData->panelGroup.panel.lastFind = applicationLayoutData->currentWindow->currentFile->buffer.cursor;
     applicationLayoutData->currentBuffer = &applicationLayoutData->panelGroup.panel.buffer;
 }
 
@@ -209,9 +209,9 @@ void layoutKeyActionCopyString(void* data){
 void layoutKeyActionPasteString(void* data){
     ApplicationLayoutData* applicationLayoutData = (ApplicationLayoutData*) data;
 
-    if(!applicationLayoutData->panelGroup.panel.active && gapGetSelectionSize(&applicationLayoutData->currentWindow->buffer)){
+    if(!applicationLayoutData->panelGroup.panel.active && gapGetSelectionSize(&applicationLayoutData->currentWindow->currentFile->buffer)){
         editorWindowKeyActionRemoveCharacterBeforeCursor(applicationLayoutData->currentWindow);
-        applicationLayoutData->currentWindow->buffer.selection.end = applicationLayoutData->currentWindow->buffer.selection.start;
+        applicationLayoutData->currentWindow->currentFile->buffer.selection.end = applicationLayoutData->currentWindow->currentFile->buffer.selection.start;
     }
     
     if(SDL_HasClipboardText()){
@@ -220,10 +220,10 @@ void layoutKeyActionPasteString(void* data){
             i32 distance = gapInsertNullTerminatedStringAt(applicationLayoutData->currentBuffer, clipboard, applicationLayoutData->currentBuffer->cursor);
             // TODO(Sarmis) this will have issues when reverting stuff in panels
             if(!applicationLayoutData->panelGroup.panel.active){
-                editorWindowAppendInsertAction(applicationLayoutData->currentWindow, applicationLayoutData->currentWindow->buffer.cursor, applicationLayoutData->currentWindow->buffer.cursor + distance);
+                editorWindowAppendInsertAction(applicationLayoutData->currentWindow, applicationLayoutData->currentWindow->currentFile->buffer.cursor, applicationLayoutData->currentWindow->currentFile->buffer.cursor + distance);
 
                 applicationLayoutData->currentWindow->temporaryColor = {1, 0, 0, 1};
-                applicationLayoutData->currentWindow->temporarySelection = {applicationLayoutData->currentWindow->buffer.cursor, applicationLayoutData->currentWindow->buffer.cursor + distance};
+                applicationLayoutData->currentWindow->temporarySelection = {applicationLayoutData->currentWindow->currentFile->buffer.cursor, applicationLayoutData->currentWindow->currentFile->buffer.cursor + distance};
             }
 
             gapSeekCursor(applicationLayoutData->currentBuffer, distance);
@@ -266,8 +266,8 @@ void layoutKeyActionCopyAndRemoveString(void* data){
 	if(selectionSize){
 		layoutKeyActionCopyString(data);
 
-        String removedString = gapGetSubString(&applicationLayoutData->currentWindow->buffer, applicationLayoutData->currentWindow->buffer.selection.start, applicationLayoutData->currentWindow->buffer.selection.end);
-        editorWindowAppendRemoveAction(applicationLayoutData->currentWindow, removedString, applicationLayoutData->currentWindow->buffer.selection.start);
+        String removedString = gapGetSubString(&applicationLayoutData->currentWindow->currentFile->buffer, applicationLayoutData->currentWindow->currentFile->buffer.selection.start, applicationLayoutData->currentWindow->currentFile->buffer.selection.end);
+        editorWindowAppendRemoveAction(applicationLayoutData->currentWindow, removedString, applicationLayoutData->currentWindow->currentFile->buffer.selection.start);
 
 		gapRemoveCharactersInRange(applicationLayoutData->currentBuffer, applicationLayoutData->currentBuffer->selection.start, applicationLayoutData->currentBuffer->selection.end);
 
@@ -275,18 +275,18 @@ void layoutKeyActionCopyAndRemoveString(void* data){
         applicationLayoutData->currentBuffer->cursor = applicationLayoutData->currentBuffer->selection.start;
 	} else if(!applicationLayoutData->panelGroup.panel.active){
         editorWindowKeyActionMoveCursorToBegginingOfLine(applicationLayoutData->currentWindow);
-        i32 start = applicationLayoutData->currentWindow->buffer.cursor;
+        i32 start = applicationLayoutData->currentWindow->currentFile->buffer.cursor;
         editorWindowKeyActionMoveCursorToEndOfLine(applicationLayoutData->currentWindow);
-        i32 end = applicationLayoutData->currentWindow->buffer.cursor;
+        i32 end = applicationLayoutData->currentWindow->currentFile->buffer.cursor;
 
 
 		layoutKeyActionCopyStringRange(data, start, end + 1);
 
-        String removedString = gapGetSubString(&applicationLayoutData->currentWindow->buffer, start, end + 1);
+        String removedString = gapGetSubString(&applicationLayoutData->currentWindow->currentFile->buffer, start, end + 1);
         editorWindowAppendRemoveAction(applicationLayoutData->currentWindow, removedString, start);
 
 		gapRemoveCharactersInRange(applicationLayoutData->currentBuffer, start, end + 1);
-        applicationLayoutData->currentWindow->buffer.cursor = start;
+        applicationLayoutData->currentWindow->currentFile->buffer.cursor = start;
     }
 }
 
@@ -297,33 +297,33 @@ void layoutKeyActionMoveLinesUp(void* data){
 
 	// if(selectionSize){
     //     // move selected lines(if there are more than one)
-    //     i32 clone = applicationLayoutData->currentWindow->buffer.cursor;
+    //     i32 clone = applicationLayoutData->currentWindow->currentFile->buffer.cursor;
 
-    //     applicationLayoutData->currentWindow->buffer.cursor = applicationLayoutData->currentWindow->buffer.gap.start;
+    //     applicationLayoutData->currentWindow->currentFile->buffer.cursor = applicationLayoutData->currentWindow->currentFile->buffer.gap.start;
     //     editorWindowKeyActionMoveCursorToBegginingOfLine(applicationLayoutData->currentWindow);
-    //     i32 start = applicationLayoutData->currentWindow->buffer.cursor;
+    //     i32 start = applicationLayoutData->currentWindow->currentFile->buffer.cursor;
 
-    //     applicationLayoutData->currentWindow->buffer.cursor = applicationLayoutData->currentWindow->buffer.gap.end;
+    //     applicationLayoutData->currentWindow->currentFile->buffer.cursor = applicationLayoutData->currentWindow->currentFile->buffer.gap.end;
     //     editorWindowKeyActionMoveCursorToEndOfLine(applicationLayoutData->currentWindow);
-    //     i32 end = applicationLayoutData->currentWindow->buffer.cursor;
+    //     i32 end = applicationLayoutData->currentWindow->currentFile->buffer.cursor;
 
-    //     applicationLayoutData->currentWindow->buffer.cursor = start;
+    //     applicationLayoutData->currentWindow->currentFile->buffer.cursor = start;
 
-    //     gapSeekCursorToPreviousNewline(&applicationLayoutData->currentWindow->buffer);
-    //     gapSeekCursorToPreviousNewline(&applicationLayoutData->currentWindow->buffer);
+    //     gapSeekCursorToPreviousNewline(&applicationLayoutData->currentWindow->currentFile->buffer);
+    //     gapSeekCursorToPreviousNewline(&applicationLayoutData->currentWindow->currentFile->buffer);
 
-	// 	gapMoveRange(&applicationLayoutData->currentWindow->buffer, start, end, applicationLayoutData->currentWindow->buffer.cursor);
+	// 	gapMoveRange(&applicationLayoutData->currentWindow->currentFile->buffer, start, end, applicationLayoutData->currentWindow->currentFile->buffer.cursor);
     // } else {
     //     // move only current line
     //     editorWindowKeyActionMoveCursorToBegginingOfLine(applicationLayoutData->currentWindow);
-    //     i32 start = applicationLayoutData->currentWindow->buffer.cursor;
+    //     i32 start = applicationLayoutData->currentWindow->currentFile->buffer.cursor;
     //     editorWindowKeyActionMoveCursorToEndOfLine(applicationLayoutData->currentWindow);
-    //     i32 end = applicationLayoutData->currentWindow->buffer.cursor;
+    //     i32 end = applicationLayoutData->currentWindow->currentFile->buffer.cursor;
 
-    //     gapSeekCursorToPreviousNewline(&applicationLayoutData->currentWindow->buffer);
-    //     gapSeekCursorToPreviousNewline(&applicationLayoutData->currentWindow->buffer);
+    //     gapSeekCursorToPreviousNewline(&applicationLayoutData->currentWindow->currentFile->buffer);
+    //     gapSeekCursorToPreviousNewline(&applicationLayoutData->currentWindow->currentFile->buffer);
 
-	// 	gapMoveRange(&applicationLayoutData->currentWindow->buffer, start, end, applicationLayoutData->currentWindow->buffer.cursor);
+	// 	gapMoveRange(&applicationLayoutData->currentWindow->currentFile->buffer, start, end, applicationLayoutData->currentWindow->currentFile->buffer.cursor);
     // }
 }
 
@@ -331,8 +331,8 @@ void layoutKeyActionOpenNewBuffer(void* data){
     ApplicationLayoutData* applicationLayoutData = (ApplicationLayoutData*) data;
 
     if(!applicationLayoutData->panelGroup.panel.active){
-        gapClean(&applicationLayoutData->currentWindow->buffer);
-        applicationLayoutData->currentWindow->buffer = gapCreateEmpty();
+        gapClean(&applicationLayoutData->currentWindow->currentFile->buffer);
+        applicationLayoutData->currentWindow->currentFile->buffer = gapCreateEmpty();
     }
 }
 
@@ -377,7 +377,7 @@ void layoutKeyActionHideCurrentWindow(void* data){
     applicationLayoutData->currentWindowIndex++;
     applicationLayoutData->currentWindowIndex %= applicationLayoutData->windowCount;
     applicationLayoutData->currentWindow = &applicationLayoutData->windows[applicationLayoutData->currentWindowIndex];
-    applicationLayoutData->currentBuffer = &applicationLayoutData->currentWindow->buffer;
+    applicationLayoutData->currentBuffer = &applicationLayoutData->currentWindow->currentFile->buffer;
 
 	if(x > applicationLayoutData->currentWindow->left){
 		layoutResizeWindow(applicationLayoutData->currentWindow, applicationLayoutData->currentWindow->width, applicationLayoutData->currentWindow->height, applicationLayoutData->currentWindow->width + width, applicationLayoutData->currentWindow->height);
@@ -391,8 +391,8 @@ void layoutKeyActionSelectAll(void* data){
     ApplicationLayoutData* applicationLayoutData = (ApplicationLayoutData*) data;
     if(!applicationLayoutData->panelGroup.panel.active){
         EditorWindow* window = applicationLayoutData->currentWindow;
-        window->buffer.selection.start = 0;
-        window->buffer.selection.end = gapGetAbstractSize(&window->buffer) - 1;
+        window->currentFile->buffer.selection.start = 0;
+        window->currentFile->buffer.selection.end = gapGetAbstractSize(&window->currentFile->buffer) - 1;
     }
 }
 
@@ -408,8 +408,8 @@ void layoutKeyActionUndoAction(void* data){
             switch (action.type) {
                 case ACTION_REMOVE:{
                         // reverse removing by inserting
-                        gapInsertStringAt(&window->buffer, action.data, action.location);
-                        applicationLayoutData->currentWindow->buffer.cursor = action.location + action.data.size;
+                        gapInsertStringAt(&window->currentFile->buffer, action.data, action.location);
+                        applicationLayoutData->currentWindow->currentFile->buffer.cursor = action.location + action.data.size;
 
                         applicationLayoutData->currentWindow->temporaryColor = {1, 0, 0, 1};
                         applicationLayoutData->currentWindow->temporarySelection = {action.location, action.location + action.data.size};
@@ -420,8 +420,8 @@ void layoutKeyActionUndoAction(void* data){
 
                 case ACTION_INSERT:{
                         // reverse inserting by removing
-                        gapRemoveCharactersInRange(&window->buffer, action.start, action.end);
-                        applicationLayoutData->currentWindow->buffer.cursor = action.start;
+                        gapRemoveCharactersInRange(&window->currentFile->buffer, action.start, action.end);
+                        applicationLayoutData->currentWindow->currentFile->buffer.cursor = action.start;
                     }
                     break;
                 

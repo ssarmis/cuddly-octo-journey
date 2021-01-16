@@ -609,3 +609,4 @@ static bool stringIsPartiallyMatching(String substring, char* string){
 
     return true;
 }
+

@@ -19,16 +19,42 @@ bool panelDefaultTick(void* data0, void* data1){
             gapInsertCharacterAt(&panel->buffer, potentialCharacter, panel->buffer.cursor);
             gapIncreaseCursor(&panel->buffer);
             return true;
-        }else if(keyboardManager->currentActiveKeyStroke & KEY_BACKSPACE){
+        } else if(keyboardManager->currentActiveKeyStroke & KEY_BACKSPACE){
             keyActionRemoveCharacterBeforeCursor(&panel->buffer);
             return true;
         } else {
             if(keyboardManager->currentActiveKeyStroke & KEY_RETURN){
                 // TODO(Sarmis) panel->action(...)
                 if(panel->suggestions.currentAmount){
+                    // u32 location = gapGetAbstractSize(&panel->buffer);
+                    // gapInsertNullTerminatedStringAt(&panel->buffer, (char*)panel->suggestions[panel->currentOption].name.data, location - 1);
+
+                    // not the best way, but I am too lazy to fix my gap buffer
+                    // to not need to remake the buffer for this...
+                    String suggestion = panel->suggestions[panel->currentOption].name;
+                    char* filename = gapToString(&panel->buffer);
+                    String filenameString = cloneString(filename);
+                    String directoryString;
+                    directoryString.data = NULL;
+
+                    u32 lastSlash = characterLastOccurence(filenameString, '/');
+                    if(lastSlash){
+                        ++lastSlash;
+                        directoryString = subString(filenameString, 0, lastSlash + 1);
+                    }
+
                     gapClean(&panel->buffer);
+
                     panel->buffer = gapCreateEmpty();
-                    gapInsertNullTerminatedStringAt(&panel->buffer, (char*)panel->suggestions[panel->currentOption].name.data, 0);
+                    if(directoryString.data){
+                        gapInsertNullTerminatedStringAt(&panel->buffer, (char*)directoryString.data, 0);
+                        gapSeekCursor(&panel->buffer, directoryString.size);
+
+                        gapInsertStringAt(&panel->buffer, suggestion, panel->buffer.cursor);
+                    } else {
+                        gapInsertStringAt(&panel->buffer, suggestion, 0);
+                    }
+                    gapSeekCursor(&panel->buffer, suggestion.size);
                 }
 
                 bool actionStatus = panel->action(applicationLayoutData);

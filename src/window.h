@@ -5,6 +5,7 @@
 #include "font.h"
 #include "gap_buffer.h"
 #include "math.h"
+#include "editor_file.h"
 
 #include "keyboard_bindings.h"
 #include "window_bindings.h"
@@ -61,7 +62,9 @@ struct EditorWindow {
     // TODO(Sarmis) preallocate selections
     Buffer<Selection> selections;
     EditorWindowStatusBar statusBar;
-    GapBuffer buffer;
+
+    EditorFile* currentFile;
+    GapBuffer buffer_; // used for empty buffer, might just treat them as untitled files
 
     bool currentlyTyping;
     i32 localTime;
@@ -97,7 +100,8 @@ static EditorWindow windowCreate(i32 width, i32 height, u32 left, u32 top){
     result.scrollLeft = result.left;
     result.scrollRight = result.left + result.width;
 
-    result.buffer = gapCreateEmpty();
+    result.currentFile = NULL;
+    result.buffer_ = gapCreateEmpty();
     result.backgroundColor = DEFAULT_COLOR_BACKGROUND;
 
     result.statusBar.size = v2(width, STATUS_BAR_HEIGHT);
@@ -150,59 +154,59 @@ static void editorWindowTick(EditorWindow* window, KeyboardManager* keyboardMana
             bool insertedCharacter = false;
             if(isAlphanumericCharacter(potentialCharacter)){
 
-                if(gapGetSelectionSize(&window->buffer)){ 
+                if(gapGetSelectionSize(&window->currentFile->buffer)){ 
 	                editorWindowKeyActionRemoveCharacterOnCursor((void*)window);
                 }
-                editorWindowAppendInsertAction(window, window->buffer.cursor, window->buffer.cursor + 1);
+                editorWindowAppendInsertAction(window, window->currentFile->buffer.cursor, window->currentFile->buffer.cursor + 1);
 
-                gapInsertCharacterAt(&window->buffer, potentialCharacter, window->buffer.cursor);
-                gapIncreaseCursor(&window->buffer);
+                gapInsertCharacterAt(&window->currentFile->buffer, potentialCharacter, window->currentFile->buffer.cursor);
+                gapIncreaseCursor(&window->currentFile->buffer);
             } else if(isSpacingCharacter(potentialCharacter)){
 
-                if(gapGetSelectionSize(&window->buffer)){ 
+                if(gapGetSelectionSize(&window->currentFile->buffer)){ 
 	                editorWindowKeyActionRemoveCharacterOnCursor((void*)window);
                 }
-                editorWindowAppendInsertAction(window, window->buffer.cursor, window->buffer.cursor + 1);
+                editorWindowAppendInsertAction(window, window->currentFile->buffer.cursor, window->currentFile->buffer.cursor + 1);
 
-                gapInsertCharacterAt(&window->buffer, potentialCharacter, window->buffer.cursor);
-                gapIncreaseCursor(&window->buffer);
+                gapInsertCharacterAt(&window->currentFile->buffer, potentialCharacter, window->currentFile->buffer.cursor);
+                gapIncreaseCursor(&window->currentFile->buffer);
             } else if(keyboardManager->currentActiveKeyStroke == KEY_TAB){ // ONLY TAB, no other key
 
-                if(gapGetSelectionSize(&window->buffer)){ 
+                if(gapGetSelectionSize(&window->currentFile->buffer)){ 
 	                editorWindowKeyActionRemoveCharacterOnCursor((void*)window);
                 }
-                editorWindowAppendInsertAction(window, window->buffer.cursor, window->buffer.cursor + 1);
+                editorWindowAppendInsertAction(window, window->currentFile->buffer.cursor, window->currentFile->buffer.cursor + 1);
 
-                gapInsertCharacterAt(&window->buffer, '\t', window->buffer.cursor);
-                gapIncreaseCursor(&window->buffer);
+                gapInsertCharacterAt(&window->currentFile->buffer, '\t', window->currentFile->buffer.cursor);
+                gapIncreaseCursor(&window->currentFile->buffer);
             } else if(keyboardManager->currentActiveKeyStroke == KEY_RETURN){ // ONLY RETURN, no other key
 
-                if(gapGetSelectionSize(&window->buffer)){ 
+                if(gapGetSelectionSize(&window->currentFile->buffer)){ 
 	                editorWindowKeyActionRemoveCharacterOnCursor((void*)window);
                 }
-                editorWindowAppendInsertAction(window, window->buffer.cursor, window->buffer.cursor + 1);
+                editorWindowAppendInsertAction(window, window->currentFile->buffer.cursor, window->currentFile->buffer.cursor + 1);
 
-                gapInsertCharacterAt(&window->buffer, '\n', window->buffer.cursor);
-                gapIncreaseCursor(&window->buffer);
+                gapInsertCharacterAt(&window->currentFile->buffer, '\n', window->currentFile->buffer.cursor);
+                gapIncreaseCursor(&window->currentFile->buffer);
             }		
         }
     } else {
-        char c = gapGetCursorCharacter(&window->buffer);
+        char c = gapGetCursorCharacter(&window->currentFile->buffer);
         if(!isSymbolCharacter(c) && !isSpacingCharacter(c)){
             // reuse buffer, don't reallocate
             window->selections.currentAmount = 0;
 
-            u32 clone = window->buffer.cursor;
-            gapSeekCursorToPreviousSymbolOrSpace(&window->buffer);
-            u32 start = window->buffer.cursor;
-            window->buffer.cursor = clone;
-            gapSeekCursorToSymbolOrSpace(&window->buffer);
-            u32 end = window->buffer.cursor;
+            u32 clone = window->currentFile->buffer.cursor;
+            gapSeekCursorToPreviousSymbolOrSpace(&window->currentFile->buffer);
+            u32 start = window->currentFile->buffer.cursor;
+            window->currentFile->buffer.cursor = clone;
+            gapSeekCursorToSymbolOrSpace(&window->currentFile->buffer);
+            u32 end = window->currentFile->buffer.cursor;
 
-            window->buffer.cursor = clone;
+            window->currentFile->buffer.cursor = clone;
 
             if(start != end){
-                String word = gapGetSubString(&window->buffer, start, end);
+                String word = gapGetSubString(&window->currentFile->buffer, start, end);
 
                 i32 status = icharacterFirstOccurence(word, ' ');
                 status += icharacterFirstOccurence(word, '\t');
@@ -210,7 +214,7 @@ static void editorWindowTick(EditorWindow* window, KeyboardManager* keyboardMana
                 if(status == -2){
                     i32 index = 0;
                     while(true){
-                        Selection selection = gapSeekIndexToMatch(&window->buffer, (char*)word.data, &index, index + 1);
+                        Selection selection = gapSeekIndexToMatch(&window->currentFile->buffer, (char*)word.data, &index, index + 1);
                         if(selection.start == selection.end){
                             break;
                         }
@@ -236,8 +240,8 @@ static void editorWindowTick(EditorWindow* window, KeyboardManager* keyboardMana
 }
 
 static void editorWindowDecideCursorPositionByGapBuffer(EditorWindow* window, FontGL* font){
-    for(int i = 0; i < window->buffer.cursor; ++i){
-        char character = gapCharacterAtIndex(&window->buffer, i); 
+    for(int i = 0; i < window->currentFile->buffer.cursor; ++i){
+        char character = gapCharacterAtIndex(&window->currentFile->buffer, i); 
         switch(character){
             case 0:{
                     // ASSERT(false);
@@ -352,32 +356,32 @@ static void editorWindowRender(EditorWindow* window,
     pushQuad(renderBufferBackground, v3(window->left + window->scrollX, window->cursor.y, 0), {window->width, FONT_HEIGHT}, uvs, DEFAULT_COLOR_LINE);
 
     
-    fontRenderGapBuffer({window->left, window->top}, &window->buffer, renderBuffer, renderBufferUI, font, 
+    fontRenderGapBuffer({window->left, window->top}, &window->currentFile->buffer, renderBuffer, renderBufferUI, font, 
                         window->scrollTop, window->scrollBottom);
 
     for(int i = 0; i < window->selections.currentAmount; ++i){
         Selection selection = window->selections[i];
-        if(selection.end < window->buffer.cursor - 1024 || selection.start > window->buffer.cursor + 1024){
+        if(selection.end < window->currentFile->buffer.cursor - 1024 || selection.start > window->currentFile->buffer.cursor + 1024){
             continue;
         }
-        visualsRenderSelection({window->left, window->top}, selection, &window->buffer, renderBuffer, renderBufferUI, font, SELECTION_SECONDARY_COLOR_TEXT);
+        visualsRenderSelection({window->left, window->top}, selection, &window->currentFile->buffer, renderBuffer, renderBufferUI, font, SELECTION_SECONDARY_COLOR_TEXT);
     }
 
     if(window->temporarySelection.start != window->temporarySelection.end){
         window->temporaryColor.w = lerp(window->temporaryColor.w, 0, 0.1);
-        visualsRenderSelection({window->left, window->top}, window->temporarySelection, &window->buffer, renderBuffer, renderBufferUI, font, window->temporaryColor);
+        visualsRenderSelection({window->left, window->top}, window->temporarySelection, &window->currentFile->buffer, renderBuffer, renderBufferUI, font, window->temporaryColor);
         if(window->temporaryColor.w < 0.1){
-            window->temporarySelection.start == window->temporarySelection.end;
+            window->temporarySelection.start = window->temporarySelection.end;
         }
     }
 
-    visualsRenderSelection({window->left, window->top}, window->buffer.selection, &window->buffer, renderBuffer, renderBufferUI, font, SELECTION_COLOR_TEXT);
-	visualsRenderMarks({window->left, window->top}, &window->buffer, renderBuffer, renderBufferUI, font);
+    visualsRenderSelection({window->left, window->top}, window->currentFile->buffer.selection, &window->currentFile->buffer, renderBuffer, renderBufferUI, font, SELECTION_COLOR_TEXT);
+	visualsRenderMarks({window->left, window->top}, &window->currentFile->buffer, renderBuffer, renderBufferUI, font);
 
     if(activeWindow){
         if(time < 20 || window->currentlyTyping){
             // set cursor width depending on whatever we found in the function above about the cursor
-            if(gapCharacterAtIndex(&window->buffer, window->buffer.cursor) == '\t'){
+            if(gapCharacterAtIndex(&window->currentFile->buffer, window->currentFile->buffer.cursor) == '\t'){
                 pushQuad(renderBufferUI, window->cursor, {FONT_HEIGHT * 2, FONT_HEIGHT}, uvs, DEFAULT_COLOR_CURSOR);
             } else {
                 pushQuad(renderBufferUI, window->cursor, {FONT_HEIGHT / 2, FONT_HEIGHT}, uvs, DEFAULT_COLOR_CURSOR);
@@ -426,9 +430,9 @@ static void editorWindowRender(EditorWindow* window,
     // TODO(Sarmis) the implementation of the status bar is questionale to me
     //              but it works, but the scrolling is affected to to laziness
     pushQuad(renderBufferBackground, window->statusBar.position, window->statusBar.size, uvs, DEFAULT_COLOR_STATUS_BAR_BACKGROUND);
-    if(window->buffer.filename){
+    if(window->currentFile->filename.data){
         char buffer[256];
-        sprintf(buffer, "%.20s ln %d", window->buffer.filename, (u32)(window->cursor.y / FONT_HEIGHT) + 1);
+        sprintf(buffer, "%.20s ln %d", window->currentFile->filename.data, (u32)(window->cursor.y / FONT_HEIGHT) + 1);
         fontRender((u8*)buffer, strlen(buffer), v2(window->statusBar.position.x + window->statusBar.size.x / 2, window->statusBar.position.y + FONT_HEIGHT - FONT_HEIGHT / 16), renderBuffer, font, DEFAULT_COLOR_STATUS_BAR_TEXT_COLOR);
     }
 
