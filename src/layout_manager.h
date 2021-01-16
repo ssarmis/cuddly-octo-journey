@@ -88,6 +88,8 @@ void layoutInitializePanelToShow(ApplicationLayoutData* applicationLayoutData, P
     applicationLayoutData->panelGroup.panel = panel;
     applicationLayoutData->panelGroup.panel.active = true;
     applicationLayoutData->panelGroup.panel.buffer = gapCreateEmpty();
+    applicationLayoutData->panelGroup.panel.size.x = applicationLayoutData->currentWindow->width;
+    applicationLayoutData->panelGroup.panel.size.y = applicationLayoutData->currentWindow->height / 2;
     applicationLayoutData->panelGroup.panel.position.x = applicationLayoutData->currentWindow->left;
     applicationLayoutData->panelGroup.panel.position.y = -applicationLayoutData->panelGroup.panel.size.y;
 }
@@ -171,6 +173,7 @@ void layoutKeyActionFindPanel(void* data){
 
     
     layoutInitializePanelToShow(applicationLayoutData, applicationLayoutData->panelGroup.findPanel);
+    applicationLayoutData->panelGroup.panel.size.y = FONT_HEIGHT * 3;
     applicationLayoutData->panelGroup.panel.lastFind = applicationLayoutData->currentWindow->buffer.cursor;
     applicationLayoutData->currentBuffer = &applicationLayoutData->panelGroup.panel.buffer;
 }

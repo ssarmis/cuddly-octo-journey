@@ -153,6 +153,7 @@ int main(int argumentCount, char* arguments[]){
     });
 
     SHADER_SCOPE(shaderUI.programId, {
+       
         shaderSetUniform4m(shaderUI.locations.matrixPerspective, 
                            orthographic(0, applicationLayoutData.windowWidth, 0, applicationLayoutData.windowHeight));
     });

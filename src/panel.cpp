@@ -1,3 +1,4 @@
+#include "general.h"
 #include "panel.h"
 #include "app.h"
 
@@ -24,6 +25,12 @@ bool panelDefaultTick(void* data0, void* data1){
         } else {
             if(keyboardManager->currentActiveKeyStroke & KEY_RETURN){
                 // TODO(Sarmis) panel->action(...)
+                if(panel->suggestions.currentAmount){
+                    gapClean(&panel->buffer);
+                    panel->buffer = gapCreateEmpty();
+                    gapInsertNullTerminatedStringAt(&panel->buffer, (char*)panel->suggestions[panel->currentOption].name.data, 0);
+                }
+
                 bool actionStatus = panel->action(applicationLayoutData);
                 if(!actionStatus){
                     panel->shakeTime = 20;
@@ -31,6 +38,12 @@ bool panelDefaultTick(void* data0, void* data1){
                     panel->active = false;
                     gapClean(&panel->buffer);
                 }
+            } else if(keyboardManager->currentActiveKeyStroke & KEY_DOWN){
+                ++panel->currentOption;
+                panel->currentOption = cuddle_clamp(panel->currentOption, 0, panel->suggestions.currentAmount - 1);
+            } else if(keyboardManager->currentActiveKeyStroke & KEY_UP){
+                --panel->currentOption;
+                panel->currentOption = cuddle_clamp(panel->currentOption, 0, panel->suggestions.currentAmount - 1);
             }
         }
     }
@@ -85,6 +98,41 @@ void panelDecideCursorPositionByGapBuffer(Panel* panel, FontGL* font){
     }
 }
 
+void panelRenderSuggestions(Panel* panel, RenderBuffer* renderBuffer, FontGL* font){
+    // TODO(Sarmis) precompute this shit
+    // this doens't need to be in here, pretty
+    // bad rendering but works for now
+    r32 yOffset = (FONT_HEIGHT * 4);
+    r32 xOffset = 12;
+    i32 start = 0;
+    i32 visibleLines = (panel->size.y - FONT_HEIGHT * 3) / FONT_HEIGHT - 1;
+    r32 approxLine = panel->currentOption;
+
+    while(approxLine >= start + visibleLines){
+        ++start;
+    }
+
+    u32 linesToDisplay = panel->suggestions.currentAmount;
+    linesToDisplay = cuddle_clamp(linesToDisplay, 0, visibleLines);
+
+    for(int i = start; i < start + linesToDisplay; ++i){
+        v3 position = panel->position + v3(xOffset, yOffset + FONT_HEIGHT * (i - start), 0);
+        u32 stringSize = panel->suggestions[i].name.size;
+        u32 charSize = FONT_HEIGHT / 2;
+        u32 charsPerLine = panel->size.x / charSize;
+        if(stringSize > charsPerLine - 7){
+            stringSize = charsPerLine - 7;
+        }
+        
+        v4 color = DEFAULT_COLOR_TEXT_PANEL_SUGGESTION;
+        if(i == panel->currentOption){
+            color = DEFAULT_COLOR_TEXT;
+        }
+
+        fontRender((u8*)panel->suggestions[i].name.data, stringSize, {position.x, position.y + 12}, renderBuffer, font, color);
+    }
+}
+
 void panelRender(Panel* panel, EditorWindow* currentWindow,
                  Shader* shader, Shader* shaderUI,
                  RenderBuffer* renderBuffer, RenderBuffer* renderBufferUI, RenderBuffer* renderBufferBackground,
@@ -96,7 +144,7 @@ void panelRender(Panel* panel, EditorWindow* currentWindow,
         panel->position = lerp(panel->position, v3(currentWindow->left + sin(time * 0.6) * 20, currentWindow->top, 0), 0.3);
         --panel->shakeTime;
     } else {
-        panel->position = lerp(panel->position, v3(currentWindow->left, currentWindow->top, 0), 0.3);
+        panel->position = lerp(panel->position, v3(currentWindow->left, currentWindow->top, 0), 0.5);
     }
     panel->cursor = {panel->position.x + 12, panel->position.y + 12 + FONT_HEIGHT + 4, 0};
     panelDecideCursorPositionByGapBuffer(panel, font);
@@ -110,24 +158,8 @@ void panelRender(Panel* panel, EditorWindow* currentWindow,
     fontRenderGapBufferNoHighlights({panel->position.x + 12, panel->position.y + 12 + FONT_HEIGHT + 4}, &panel->buffer, renderBuffer, renderBufferUI, font, 0, FONT_HEIGHT * 4, DEFAULT_COLOR_PANEL_TEXT);
     fontRender((u8*)panel->description, strlen(panel->description), {panel->position.x + 12, panel->position.y + FONT_HEIGHT + 12}, renderBuffer, font, DEFAULT_COLOR_TEXT_PANEL_DESCRIPTION);
 
-    r32 yOffset = (FONT_HEIGHT * 4);
-    r32 xOffset = 0;
-
-    for(int i = 0; i < panel->suggestions.currentAmount; ++i){
-        r32 yAdjustment = 0;
-        // ugly way to wrap the suggestions, its only one page
-        if(yOffset + FONT_HEIGHT * i > currentWindow->top + currentWindow->height){
-            yAdjustment = -currentWindow->height;
-            xOffset = panel->size.x;
-        } else {
-            yAdjustment = 0;
-        }
-        v3 position = panel->position + v3(xOffset + 12, yAdjustment + yOffset + FONT_HEIGHT * i, 0);
-        v2 size = v2(panel->size.x - 12, FONT_HEIGHT + 3);
-        pushQuad(renderBufferBackground, position, size, uvs, DEFAULT_COLOR_PANEL_BACKGROUND_SUGGESTION);
-        fontRender((u8*)panel->suggestions[i].name.data, panel->suggestions[i].name.size, {position.x + 12, position.y + 12}, renderBuffer, font, DEFAULT_COLOR_TEXT_PANEL_SUGGESTION);
-    }
-
+    panelRenderSuggestions(panel, renderBuffer, font);
+    
     SHADER_SCOPE(shaderUI->programId, {
         shaderSetUniform4m(shaderUI->locations.matrixView, m4());
         shaderSetUniform4m(shaderUI->locations.matrixTransform, m4());
@@ -158,6 +190,5 @@ void panelRender(Panel* panel, EditorWindow* currentWindow,
         shaderSetUniform32u(shader->locations.boundsBottom, windowHeight);
         flushRenderBuffer(GL_TRIANGLES, renderBuffer);
     });
-
 }
 

@@ -24,6 +24,7 @@ struct Panel {
     Buffer<Suggestion> suggestions;
     u32 lastFind;
     GapBuffer buffer;
+    i32 currentOption;
     bool (*action)(void*);
     bool (*tick)(void*, void*);
 };
