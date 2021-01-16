@@ -59,8 +59,9 @@ String findFont(char* name){
 }
 
 
+
 int main(int argumentCount, char* arguments[]){
-    
+
 #if 1
     // TODO(Sarmis) only load file contents to a certain depth
     // so not everything is loaded
@@ -131,11 +132,6 @@ int main(int argumentCount, char* arguments[]){
 
     TRACE("%s\n", glGetString(GL_VERSION));
 
-    /// now that SDL things are done we can complete the settings
-
-    ///
-
-
     SDL_Event event;
 
     RenderBuffer renderBuffer = createVertexArrayObject();
@@ -165,7 +161,7 @@ int main(int argumentCount, char* arguments[]){
     if(argumentCount > 1){
         applicationLayoutData.currentWindow->buffer = gapReadFile(arguments[1]);
     } else {
-        // applicationLayoutData.filePool = editorFilePoolLoadAllFilesFromDirectory("./", true);
+        applicationLayoutData.filePool = editorFilePoolLoadAllFilesFromDirectory(".", true);
         applicationLayoutData.currentWindow->buffer = gapCreateEmpty();
     }
 
@@ -289,8 +285,7 @@ int main(int argumentCount, char* arguments[]){
         }
         
         if(applicationLayoutData.panelGroup.panel.active){
-            applicationLayoutData.panelGroup.panel.tick(&applicationLayoutData.panelGroup.panel,
-                                                        applicationLayoutData.currentWindow, &keyboardManager);
+            applicationLayoutData.panelGroup.panel.tick(&applicationLayoutData, &keyboardManager);
             if(applicationLayoutData.panelGroup.panel.active){ // could become inactive in ticking
                 panelRender(&applicationLayoutData.panelGroup.panel, applicationLayoutData.currentWindow,
                     &shader, &shaderUI,

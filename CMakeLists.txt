@@ -14,6 +14,7 @@ include_directories(
 add_executable( ${PROJECT_NAME} 
     infernoGl/gl.cpp
     src/window_bindings.cpp
+    src/panel.cpp
     src/app.cpp
 )
 

@@ -10,11 +10,11 @@ struct EditorFilePool {
     Buffer<EditorFile> files;
 };
 
-void editorFilePoolAppendPool(EditorFilePool* destination, EditorFilePool addition){
+static void editorFilePoolAppendPool(EditorFilePool* destination, EditorFilePool addition){
     bufferAppend<EditorFile>(&destination->files, &addition.files);
 }
 #include <stdio.h>
-EditorFilePool editorFilePoolLoadAllFilesFromDirectory(char* path, bool recursive=false){
+static EditorFilePool editorFilePoolLoadAllFilesFromDirectory(char* path, bool recursive=false){
     EditorFilePool result = {};
 
     Buffer<String> directories = {};
@@ -68,7 +68,7 @@ EditorFilePool editorFilePoolLoadAllFilesFromDirectory(char* path, bool recursiv
     return result;
 }
 
-void editorFilePoolFreeSpace(EditorFilePool* filePool){
+static void editorFilePoolFreeSpace(EditorFilePool* filePool){
     for(int i = 0; i < filePool->files.currentAmount; ++i){
         gapClean(&filePool->files[i].buffer);
         

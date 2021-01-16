@@ -9,7 +9,7 @@ struct EditorFile {
     GapBuffer buffer;
 };
 
-EditorFile editorFileReadFile(char* filename){
+static EditorFile editorFileReadFile(char* filename){
     EditorFile result = {};
 
     String fullFilename = cloneString(filename);

@@ -541,3 +541,71 @@ static void cleanStringBuffer(Buffer<String> buffer){
     
     bufferClean<String>(&buffer);
 }
+
+static Buffer<String> split(String string, char delimiter){
+    Buffer<String> result = {};
+    
+    i32 start = 0;
+    i32 end = 0;
+
+    for(int i = 0; i <= string.size; ++i){
+         if(string.data[i] == delimiter){
+            end = i;
+            if(end - start <= 1){
+                start = i;
+                continue;
+            }
+            bufferAppend<String>(&result, subString(string, start ? (start + 1) : start, end));
+            start = i;
+         } else if(string.data[i] == '\0'){
+             end = i;
+             if(end - start <= 1){
+                 start = i;
+                 continue;
+             }
+             bufferAppend<String>(&result, subString(string, start ? (start + 1) : start, end));
+             start = i;
+         }
+    }
+
+    return result;
+}
+
+
+static bool stringIsMatchingInWord(String substring, String word){
+    for(int i = 0; i < word.size - substring.size; ++i){
+        bool match = true;
+        for(int ii = 0; ii < substring.size; ++ii){
+            if(substring.data[ii] != word.data[i + ii]){
+                match = false;
+                break;
+            }
+        }
+        if(match){
+            return true;
+        }
+    }
+   return false;
+}
+
+
+static bool stringIsPartiallyMatching(char* substring, char* string){
+    while(*substring){
+        if(*substring++ != *string++){
+            return false;
+        }
+    }
+
+    return true;
+}
+
+static bool stringIsPartiallyMatching(String substring, char* string){
+    char* clone = (char*)substring.data;
+    while(substring.size--){
+        if(*clone++ != *string++){
+            return false;
+        }
+    }
+
+    return true;
+}

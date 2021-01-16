@@ -453,11 +453,16 @@ void layoutKeyBindingInitialize(KeyboardBindingManager* keyboardBindingManager){
     keyBindingAddEntry1(keyboardBindingManager, KEY_CTRL | 'f',     layoutKeyActionFindPanel);
     keyBindingAddEntry1(keyboardBindingManager, KEY_CTRL | KEY_TAB, layoutKeyActionChangeCurrentWindowToNext);
 #elif defined __APPLE__
+    keyBindingAddEntry1(keyboardBindingManager, KEY_CMD | 'w',     layoutKeyActionHideCurrentWindow);
+    keyBindingAddEntry1(keyboardBindingManager, KEY_CMD | KEY_SHIFT | KEY_UP,     layoutKeyActionRestoreWindows);
+
+    keyBindingAddEntry1(keyboardBindingManager, KEY_CMD | 'a',     layoutKeyActionSelectAll);
+    keyBindingAddEntry1(keyboardBindingManager, KEY_CMD | 'z',     layoutKeyActionUndoAction);
     keyBindingAddEntry1(keyboardBindingManager, KEY_CMD | 'x',     layoutKeyActionCopyAndRemoveString);
     keyBindingAddEntry1(keyboardBindingManager, KEY_CMD | 'c',     layoutKeyActionCopyString);
     keyBindingAddEntry1(keyboardBindingManager, KEY_CMD | 'v',     layoutKeyActionPasteString);
 
-    keyBindingAddEntry1(keyboardBindingManager, KEY_CMD | 'p',     layoutKeyActionOpenFilePanel);
+    keyBindingAddEntry1(keyboardBindingManager, KEY_CMD | 'p',     layoutKeyActionQuickOpenFilePanel);
     keyBindingAddEntry1(keyboardBindingManager, KEY_CMD | 'o',     layoutKeyActionOpenFilePanel);
     keyBindingAddEntry1(keyboardBindingManager, KEY_CMD | 's',     layoutKeyActionSaveFilePanel);
     keyBindingAddEntry1(keyboardBindingManager, KEY_CMD | 'g',     layoutKeyActionGotoLinePanel);
