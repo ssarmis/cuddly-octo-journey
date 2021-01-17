@@ -1,3 +1,4 @@
+#define SDL_PLATFORM_BACKEND
 #define STB_TRUETYPE_IMPLEMENTATION  // force following include to generate implementation
 
 #ifdef __APPLE__
@@ -16,6 +17,7 @@
 #include "shader.h"
 #include "font.h"
 
+#include "platform_window.h"
 #include "gap_buffer.h"
 #include "window.h"
 #include "panel.h"
@@ -64,88 +66,20 @@ int main(int argumentCount, char* arguments[]){
 #if 1
     // TODO(Sarmis) only load file contents to a certain depth
     // so not everything is loaded
-    applicationLayoutData.scheduleChangeInSize = false;
-
-    applicationLayoutData.windowWidth = 1280;
-    applicationLayoutData.windowHeight = 768;
-
-    applicationLayoutData.windowCount = 2;
-    applicationLayoutData.windows[0] = windowCreate(applicationLayoutData.windowWidth / 2,
-                                                    applicationLayoutData.windowHeight, 0, 0);
-    applicationLayoutData.windows[1] = windowCreate(applicationLayoutData.windowWidth / 2,
-                                                    applicationLayoutData.windowHeight, applicationLayoutData.windowWidth / 2 + 2, 0);
-
-    applicationLayoutData.layoutWindows[0] = applicationLayoutData.windows[0]; 
-    applicationLayoutData.layoutWindows[1] = applicationLayoutData.windows[1];
-
-    applicationLayoutData.currentWindowIndex = 0;
-    applicationLayoutData.currentWindow = &applicationLayoutData.windows[0];
-    applicationLayoutData.currentBuffer = &applicationLayoutData.currentWindow->currentFile->buffer;
-
-    EditorFile* bufferFile[2];
-    bufferFile[0] = new EditorFile();
-    bufferFile[1] = new EditorFile();
-
-    bufferFile[0]->buffer = gapCreateEmpty();
-    bufferFile[0]->filename.data = NULL;
-    bufferFile[0]->fullPath.data = NULL;
-
-    bufferFile[1]->buffer = gapCreateEmpty();
-    bufferFile[1]->filename.data = NULL;
-    bufferFile[1]->fullPath.data = NULL;
-
-    applicationLayoutData.windows[0].currentFile = bufferFile[0];
-    applicationLayoutData.windows[1].currentFile = bufferFile[1];
-
-    gapInsertNullTerminatedStringAt(&applicationLayoutData.windows[1].currentFile->buffer, R"(
-********************************************************************
-
-                    uwu Welcome to my editor
-
-            I hope you won't get annoyed by the bugs ;)
-        it has some basic functionalities:
-            - basic C/C++ syntax highlighting (static, int, void, etc...)
-              not customizeable yet without the source code
-            - 2 windows, one can be closed, the other can be opened again
-              with CTRL + SHIFT + UP,
-              any number of windows is supported with any positioning
-              but I don't have a proper grid system in place right now
-            - basic UNDO
-            - find/goto line
-            - highlights on words
-
-        Thank you for using me *chu* <3
-
-********************************************************************
-
-    )", 0);
+    platformInitializeParameters();
     
-    if(SDL_Init(SDL_INIT_EVERYTHING) < 0){
-        TRACE("Could not initialize SDL2\n");
-        return 1;
+    applicationLayoutDataInitialize(&applicationLayoutData);
+    PlatformWindow window = platformCreateWindow("cuddle", applicationLayoutData.windowWidth, applicationLayoutData.windowHeight);
+
+    if(argumentCount > 1){
+        applicationLayoutData.currentWindow->currentFile->buffer = gapReadFile(arguments[1]);
+    } else {
+        applicationLayoutData.filePool = editorFilePoolLoadAllFilesFromDirectory(".", true);
     }
-
-    SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 3);
-    SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 3);
-    SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_CORE);
-
-    SDL_GL_SetAttribute(SDL_GL_RED_SIZE, 5);
-    SDL_GL_SetAttribute(SDL_GL_GREEN_SIZE, 5);
-    SDL_GL_SetAttribute(SDL_GL_BLUE_SIZE, 5);
-    SDL_GL_SetAttribute(SDL_GL_DEPTH_SIZE, 16);
-    SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, 1);
-
-    SDL_Window *window = SDL_CreateWindow("App",
-                                          SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED,
-                                          applicationLayoutData.windowWidth, applicationLayoutData.windowHeight,
-                                          SDL_WINDOW_OPENGL | SDL_WINDOW_RESIZABLE);
-    SDL_GLContext glcontext = SDL_GL_CreateContext(window);
 
     initializeGL();
 
     TRACE("%s\n", glGetString(GL_VERSION));
-
-    SDL_Event event;
 
     RenderBuffer renderBuffer = createVertexArrayObject();
     pushPreProcesedQuadsIndices(&renderBuffer);
@@ -171,61 +105,8 @@ int main(int argumentCount, char* arguments[]){
                            orthographic(0, applicationLayoutData.windowWidth, 0, applicationLayoutData.windowHeight));
     });
 
-	
-    if(argumentCount > 1){
-        applicationLayoutData.currentWindow->currentFile->buffer = gapReadFile(arguments[1]);
-    } else {
-        applicationLayoutData.filePool = editorFilePoolLoadAllFilesFromDirectory(".", true);
-    }
-
-    // TODO(Sarmis) make initialization for these
-    // TODO(Sarmis) using virtual functions would yield
-    //              a similar result but with les hussle
-
-    applicationLayoutData.panelGroup.quickOpenPanel = panelCreate({0, 0, 0}, {400, FONT_HEIGHT * 3 + 12 + 4}, "Quick open");
-    applicationLayoutData.panelGroup.quickOpenPanel.action = quickOpenFileAction;
-    applicationLayoutData.panelGroup.quickOpenPanel.tick = quickOpenFileTick;
-
-    applicationLayoutData.panelGroup.openFilePanel = panelCreate({0, 0, 0}, {400, FONT_HEIGHT * 3 + 12 + 4}, "Open file");
-    applicationLayoutData.panelGroup.openFilePanel.action = openFileAction;
-    applicationLayoutData.panelGroup.openFilePanel.tick = openFileTick;
-
-    applicationLayoutData.panelGroup.findPanel = panelCreate({0, 0, 0}, {400, FONT_HEIGHT * 3 + 12 + 4}, "Find");
-    applicationLayoutData.panelGroup.findPanel.action = findAction;
-    applicationLayoutData.panelGroup.findPanel.tick = findTick;
-
-    applicationLayoutData.panelGroup.gotoLinePanel = panelCreate({0, 0, 0}, {400, FONT_HEIGHT * 3 + 12 + 4}, "Goto line");
-    applicationLayoutData.panelGroup.gotoLinePanel.action = gotoLineAction;
-
-    applicationLayoutData.panelGroup.saveFilePanel = panelCreate({0, 0, 0}, {400, FONT_HEIGHT * 3 + 12 + 4}, "Save file");
-    applicationLayoutData.panelGroup.saveFilePanel.action = saveFileAction;
-
     KeyboardManager keyboardManager = {};
-
-    for(char c = 'a'; c <= 'z'; ++c){
-        keyboardManager.shiftCharactersLUT[c] = c - ' ';
-    }
-
-    keyboardManager.shiftCharactersLUT['1'] = '!';
-    keyboardManager.shiftCharactersLUT['2'] = '@';
-    keyboardManager.shiftCharactersLUT['3'] = '#';
-    keyboardManager.shiftCharactersLUT['4'] = '$';
-    keyboardManager.shiftCharactersLUT['5'] = '%';
-    keyboardManager.shiftCharactersLUT['6'] = '^';
-    keyboardManager.shiftCharactersLUT['7'] = '&';
-    keyboardManager.shiftCharactersLUT['8'] = '*';
-    keyboardManager.shiftCharactersLUT['9'] = '(';
-    keyboardManager.shiftCharactersLUT['0'] = ')';
-    keyboardManager.shiftCharactersLUT['['] = '{';
-    keyboardManager.shiftCharactersLUT[']'] = '}';
-    keyboardManager.shiftCharactersLUT['\''] = '"';
-    keyboardManager.shiftCharactersLUT['\\'] = '|';
-    keyboardManager.shiftCharactersLUT['/'] = '?';
-    keyboardManager.shiftCharactersLUT[','] = '<';
-    keyboardManager.shiftCharactersLUT['.'] = '>';
-    keyboardManager.shiftCharactersLUT['='] = '+';
-    keyboardManager.shiftCharactersLUT['-'] = '_';
-    keyboardManager.shiftCharactersLUT[';'] = ':';
+    keyboardManagerInitialize(&keyboardManager);
 
     i32 time = 0;
 
@@ -233,7 +114,6 @@ int main(int argumentCount, char* arguments[]){
     layoutKeyBindingInitialize(&layoutManagerKeybindings);
 
     LayoutEvent layoutEvent = {};
-
 
     bool done = false;
     while(!done){
@@ -310,7 +190,7 @@ int main(int argumentCount, char* arguments[]){
             applicationLayoutData.currentBuffer = &applicationLayoutData.currentWindow->currentFile->buffer;
         }
         
-        SDL_GL_SwapWindow(window);
+        SDL_GL_SwapWindow(window.nativeWindow);
     }
 
     bufferClean<Selection>(&applicationLayoutData.windows[0].selections);
