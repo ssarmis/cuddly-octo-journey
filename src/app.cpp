@@ -16,7 +16,6 @@
 #include "shader.h"
 #include "font.h"
 
-#include "settings.h"
 #include "gap_buffer.h"
 #include "window.h"
 #include "panel.h"

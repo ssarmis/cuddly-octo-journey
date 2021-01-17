@@ -61,7 +61,7 @@ bool saveFileAction(void* data0){
     char* filename = gapToString(filenameBuffer);
 
     gapWriteFile(&currentWindow->currentFile->buffer, filename);
-    TRACE("Saved file %s\n", currentwindow->currentFile->filename.data);
+    TRACE("Saved file %s\n", currentWindow->currentFile->filename.data);
 
     currentWindow->backgroundColor = {0, 0.1, 0, 1};
 
@@ -93,21 +93,44 @@ bool quickOpenFileAction(void* data0){
     EditorWindow* currentWindow = applicationLayoutData->currentWindow;
     GapBuffer* filenameBuffer = &panel->buffer;
 
-    char* fileanme = gapToString(filenameBuffer);
-    GapBuffer buffer = gapReadFile(fileanme);
+    char* filename = gapToString(filenameBuffer);
+    String filenameString = cloneString(filename);
 
-    if(!filenameBuffer->data){
-        // clean panel buffer
-        return false;
+    EditorFile* potentialFile = getEditorFileByFullPath(applicationLayoutData->filePool.files, filenameString);
+    if(potentialFile){
+        currentWindow->currentFile = potentialFile;
+        delete[] filenameString.data;
+    } else {
+        GapBuffer buffer = gapReadFile(filename);
+
+        if(!buffer.data){
+            // clean panel buffer
+            return false;
+        }
+
+        EditorFile newFile = {};
+        newFile.buffer = buffer;
+        newFile.fullPath = filenameString;
+
+        u32 lastSlash = characterLastOccurence(filenameString, '/');
+        if(lastSlash){
+            ++lastSlash;
+            String substring = subString(filenameString, lastSlash + 1, filenameString.size);
+            newFile.filename = substring;
+        } else {
+            newFile.filename = filenameString;
+        }
+
+        bufferAppend<EditorFile>(&applicationLayoutData->filePool.files, newFile);
+
+        currentWindow->currentFile = &applicationLayoutData->filePool.files[applicationLayoutData->filePool.files.currentAmount - 1];
     }
-////
-     currentWindow->currentFile->buffer = buffer;
-//
-////    currentWindow->scrollX = 0;
-////    currentWindow->scrollY = 0;
-//
+
+    currentWindow->scrollX = 0;
+    currentWindow->scrollY = 0;
+
     cleanSuggestionBuffer(panel->suggestions);
-//
+
     return true;
     // clean panel gap buffer
 }
@@ -121,14 +144,6 @@ bool openFileAction(void* data0){
     char* filename = gapToString(filenameBuffer);
     String filenameString = cloneString(filename);
 
-    // if(window->currentFile->filename.data){
-    //     // TODO(Sarmis) add some save thing
-    //     // even something like a logo or idk
-    //     // to indicate that someting was saved
-    //     // and make it global so it can be called from anywhere
-    //     gapWriteFile(&window->currentFile->buffer);
-    //     TRACE("Saved file %s\n", window->currentFile->filename.data);
-    // }
     EditorFile* potentialFile = getEditorFileByFullPath(applicationLayoutData->filePool.files, filenameString);
     if(potentialFile){
         currentWindow->currentFile = potentialFile;

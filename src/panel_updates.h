@@ -147,7 +147,7 @@ bool quickOpenFileTick(void* data0, void* data1){
         if(panel->suggestions.currentAmount >= 1){
             // not the best way, but I am too lazy to fix my gap buffer
             // to not need to remake the buffer for this...
-            String suggestion = panel->suggestions[0].name;
+            String suggestion = panel->suggestions[panel->currentOption].name;
             char* filename = gapToString(&panel->buffer);
             String filenameString = cloneString(filename);
             String directoryString;

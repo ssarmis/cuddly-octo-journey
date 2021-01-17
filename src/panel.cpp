@@ -26,11 +26,6 @@ bool panelDefaultTick(void* data0, void* data1){
             if(keyboardManager->currentActiveKeyStroke & KEY_RETURN){
                 // TODO(Sarmis) panel->action(...)
                 if(panel->suggestions.currentAmount){
-                    // u32 location = gapGetAbstractSize(&panel->buffer);
-                    // gapInsertNullTerminatedStringAt(&panel->buffer, (char*)panel->suggestions[panel->currentOption].name.data, location - 1);
-
-                    // not the best way, but I am too lazy to fix my gap buffer
-                    // to not need to remake the buffer for this...
                     String suggestion = panel->suggestions[panel->currentOption].name;
                     char* filename = gapToString(&panel->buffer);
                     String filenameString = cloneString(filename);
@@ -218,3 +213,4 @@ void panelRender(Panel* panel, EditorWindow* currentWindow,
     });
 }
 
+ 
