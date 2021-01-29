@@ -24,7 +24,7 @@ static PlatformWindow platformCreateWindow(char* name, u32 width, u32 height){
 static void platformInitializeParameters(){
     if(SDL_Init(SDL_INIT_EVERYTHING) < 0){
         TRACE("Could not initialize SDL2\n");
-        return 1;
+        return;
     }
 
     SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 3);

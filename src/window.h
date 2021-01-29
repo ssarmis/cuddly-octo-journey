@@ -177,7 +177,15 @@ static void editorWindowTick(EditorWindow* window, KeyboardManager* keyboardMana
                 }
                 editorWindowAppendInsertAction(window, window->currentFile->buffer.cursor, window->currentFile->buffer.cursor + 1);
 				// NOTE(Sarmis) lets assume \t is 4 spaces
-                gapInsertCharacterAt(&window->currentFile->buffer, '\t', window->currentFile->buffer.cursor);
+                // gapInsertCharacterAt(&window->currentFile->buffer, '\t', window->currentFile->buffer.cursor);
+                // gapIncreaseCursor(&window->currentFile->buffer);
+                gapInsertCharacterAt(&window->currentFile->buffer, ' ', window->currentFile->buffer.cursor);
+                gapIncreaseCursor(&window->currentFile->buffer);
+                gapInsertCharacterAt(&window->currentFile->buffer, ' ', window->currentFile->buffer.cursor);
+                gapIncreaseCursor(&window->currentFile->buffer);
+                gapInsertCharacterAt(&window->currentFile->buffer, ' ', window->currentFile->buffer.cursor);
+                gapIncreaseCursor(&window->currentFile->buffer);
+                gapInsertCharacterAt(&window->currentFile->buffer, ' ', window->currentFile->buffer.cursor);
                 gapIncreaseCursor(&window->currentFile->buffer);
             } else if(keyboardManager->currentActiveKeyStroke == KEY_RETURN){ // ONLY RETURN, no other key
 
